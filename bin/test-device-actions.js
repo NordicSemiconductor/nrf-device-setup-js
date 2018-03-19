@@ -83,44 +83,52 @@ function detachAndWaitFor(usbdev, interfaceNumber, newSerialNumber) {
         DeviceActions.trigger.sendDetachRequest(usbdev, interfaceNumber)
             .catch(console.error)
             .then(() => {
-                lister.once('conflated', deviceMap => {
-                    lister.stop();
-                    const newSerNr = '9632826579208d5d' || newSerialNumber;
-                    if (deviceMap.has(newSerNr)) {
-                        console.log('found', newSerNr);
-                        resolve(deviceMap.get(newSerNr));
-                    } else {
-                        reject(new Error('something attached, but not what we expected'));
-                    }
-                }).start();
+                setTimeout(() => {
+                    lister.once('conflated', deviceMap => {
+                        lister.stop();
+                        if (deviceMap.has(newSerialNumber)) {
+                            resolve(deviceMap.get(newSerialNumber));
+                        } else {
+                            reject(new Error('something attached, but not what we expected'));
+                        }
+                    })
+                        .once('error', console.error)
+                        .start();
+                }, 1000);
             });
     });
 }
 
 chooseDevice().then(device => {
     console.log('\nSelected', device.serialNumber);
-    console.log('DFU mode:', DeviceActions.isDeviceInDFUMode(device));
+    const dfuMode = DeviceActions.isDeviceInDFUMode(device);
+
+    if (dfuMode) {
+        console.log('Device is already in DFU mode');
+        return;
+    }
 
     const usbdev = device.usb.device;
     const interfaceNumber = DeviceActions.trigger.getDFUInterfaceNumber(usbdev);
-    // usbdev.open();
+
+    if (interfaceNumber < 0) {
+        console.log('Device has no DFU interface');
+        return;
+    }
 
     DeviceActions.trigger.getSemVersion(usbdev, interfaceNumber)
         .then(semver => console.log('Application semver:', semver))
         .then(() => DeviceActions.trigger.getDfuInfo(usbdev, interfaceNumber))
         .then(dfuInfo => console.log('DFU Info:', dfuInfo))
         .then(() => DeviceActions.trigger.predictSerialNumberAfterReset(usbdev))
+        .then(() => '9632826579208d5d') // temporary hack
         .then(newSerNr => {
             console.log('Serial number after reset should be:', newSerNr);
             return detachAndWaitFor(usbdev, interfaceNumber, newSerNr);
         })
-        // .then(() => {
-        //     try {
-        //         usbdev.close();
-        //     } catch (error) {
-        //         console.error(error);
-        //     }
-        // })
+        .then(dfuDevice => {
+            console.log('found', dfuDevice);
+        })
         .catch(console.error);
 })
     .catch(error => {

@@ -60,13 +60,11 @@ const openDecorator = decoratee => (...args) => {
         return decoratee(...args);
     }
     try {
-        console.log('open');
         usbdev.open();
     } catch (e) { console.error(e); }
     return decoratee(...args)
         .then(result => {
             try {
-                console.log('close');
                 usbdev.close();
             } catch (e) { console.error(e); }
             return result;
