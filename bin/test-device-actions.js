@@ -42,7 +42,7 @@ const lister = new DeviceLister({
     usb: false,
     nordicUsb: true,
     seggerUsb: false,
-    serialport: false,
+    serialport: true,
     jlink: false,
 });
 
@@ -53,6 +53,9 @@ function chooseDevice() {
 
             console.log();
             deviceMap.forEach((device, serialNumber) => {
+                if (!device.usb) {
+                    return;
+                }
                 console.log(`${serialNumber}: ${device.usb.manufacturer} / ${device.usb.product}`);
             });
 
@@ -73,7 +76,7 @@ function chooseDevice() {
                     : reject(new Error('no device selected'));
             });
         })
-            .once('error', console.error)
+            .once('error', () => {})
             .start();
     });
 }
@@ -92,7 +95,7 @@ function detachAndWaitFor(usbdev, interfaceNumber, newSerialNumber) {
                             reject(new Error('something attached, but not what we expected'));
                         }
                     })
-                        .once('error', console.error)
+                        .once('error', () => {})
                         .start();
                 }, 1000);
             });

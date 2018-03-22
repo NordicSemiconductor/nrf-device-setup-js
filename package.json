@@ -21,7 +21,8 @@
   ],
   "dependencies": {
     "debug": "^3.1.0",
-    "nrf-device-lister": "^0.1.1"
+    "nrf-device-lister": "^0.1.1",
+    "serialport": "git+https://github.com/node-serialport/node-serialport.git"
   },
   "devDependencies": {
     "eslint": "^4.16.0",
