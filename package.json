@@ -21,6 +21,7 @@
   ],
   "dependencies": {
     "debug": "^3.1.0",
+    "inquirer": "^5.1.0",
     "nrf-device-lister": "^0.1.1",
     "serialport": "git+https://github.com/node-serialport/node-serialport.git"
   },
