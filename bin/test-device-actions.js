@@ -33,50 +33,53 @@
 
 'use strict';
 
-const readline = require('readline');
+const inquirer = require('inquirer');
 
 const DeviceLister = require('nrf-device-lister');
 const DeviceActions = require('../');
 
-const lister = new DeviceLister({
+const traits = {
     usb: false,
     nordicUsb: true,
-    seggerUsb: false,
+    seggerUsb: true,
+    nordicDfu: true,
     serialport: true,
-    jlink: false,
-});
+    jlink: true,
+};
+
+const lister = new DeviceLister(traits);
 
 function chooseDevice() {
     return new Promise((resolve, reject) => {
         lister.once('conflated', deviceMap => {
             lister.stop();
 
-            console.log();
+            const choices = [];
             deviceMap.forEach((device, serialNumber) => {
-                if (!device.usb) {
-                    return;
-                }
-                console.log(`${serialNumber}: ${device.usb.manufacturer} / ${device.usb.product}`);
+                const type = Object.keys(traits).find(e => Object.keys(device).includes(e));
+                choices.push({
+                    key: serialNumber.toString(),
+                    name: `${serialNumber}: ${device[type].manufacturer} / ${device[type].product || device[type].productId}`,
+                    value: serialNumber,
+                });
             });
 
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-                completer: line => {
-                    const completions = [...deviceMap.keys()];
-                    const hits = completions.filter(c => c.startsWith(line));
-                    return [hits.length ? hits : completions, line];
-                },
-            });
-            rl.question('\nSelect device (serialnumber, tab-completion) > ', serialNumber => {
-                rl.close();
-                const device = deviceMap.get(serialNumber);
-                return device
-                    ? resolve(device)
-                    : reject(new Error('no device selected'));
-            });
+            console.log();
+            inquirer.prompt([{
+                type: 'list',
+                name: 'serialNumber',
+                message: 'Select device',
+                choices,
+            }])
+                .then(({ serialNumber }) => {
+                    const device = deviceMap.get(serialNumber);
+                    return device
+                        ? resolve(device)
+                        : reject(new Error('no device selected'));
+                })
+                .catch(console.error);
         })
-            .once('error', () => {})
+            .on('error', () => {})
             .start();
     });
 }
@@ -103,15 +106,19 @@ function detachAndWaitFor(usbdev, interfaceNumber, newSerialNumber) {
 }
 
 chooseDevice().then(device => {
-    console.log('\nSelected', device.serialNumber);
-    const dfuMode = DeviceActions.isDeviceInDFUMode(device);
+    const ud = device.usb || device.nordicUsb || device.nordicDfu || device.seggerUsb;
+    if (!ud) {
+        console.log('Device has no USB interface');
+        return;
+    }
+    const usbdev = ud.device;
 
+    const dfuMode = DeviceActions.isDeviceInDFUMode(device);
     if (dfuMode) {
         console.log('Device is already in DFU mode');
         return;
     }
 
-    const usbdev = device.usb.device;
     const interfaceNumber = DeviceActions.trigger.getDFUInterfaceNumber(usbdev);
 
     if (interfaceNumber < 0) {
@@ -124,7 +131,6 @@ chooseDevice().then(device => {
         .then(() => DeviceActions.trigger.getDfuInfo(usbdev, interfaceNumber))
         .then(dfuInfo => console.log('DFU Info:', dfuInfo))
         .then(() => DeviceActions.trigger.predictSerialNumberAfterReset(usbdev))
-        .then(() => '9632826579208d5d') // temporary hack
         .then(newSerNr => {
             console.log('Serial number after reset should be:', newSerNr);
             return detachAndWaitFor(usbdev, interfaceNumber, newSerNr);
