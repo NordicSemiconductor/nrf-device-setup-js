@@ -1,4 +1,5 @@
 import buble from 'rollup-plugin-buble';
+import async from 'rollup-plugin-async';
 import pkg from './package.json';
 
 export default [
@@ -9,7 +10,8 @@ export default [
         ],
         external: ['events', 'debug', 'usb', 'serialport', 'pc-nrfjprog-js', 'nrf-device-lister'],
         plugins: [
-            buble({}),
+            async(),
+            buble({ transforms: { generator: false } }),
         ],
     },
 ];
