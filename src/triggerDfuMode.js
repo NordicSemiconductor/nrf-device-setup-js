@@ -106,7 +106,7 @@ export const getSemVersion = openDecorator((usbdev, interfaceNumber) => (
             NORDIC_SEM_VER_REQUEST, 0, interfaceNumber, 256, (error, data) => (
                 error
                     ? reject(error)
-                    : resolve(String.fromCharCode.apply('utf16le', data))
+                    : resolve(String.fromCharCode.apply('utf16le', data).replace(/\0$/, ''))
             )
         );
     })
