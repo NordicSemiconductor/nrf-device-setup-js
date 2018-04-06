@@ -34,6 +34,7 @@
 'use strict';
 
 const inquirer = require('inquirer');
+const path = require('path');
 
 const DeviceLister = require('nrf-device-lister');
 const DeviceActions = require('../');
@@ -53,6 +54,7 @@ function chooseDevice() {
     return new Promise((resolve, reject) => {
         lister.once('conflated', deviceMap => {
             lister.stop();
+            lister.removeAllListeners('error');
 
             const choices = [];
             deviceMap.forEach((device, serialNumber) => {
@@ -84,62 +86,83 @@ function chooseDevice() {
     });
 }
 
-function detachAndWaitFor(usbdev, interfaceNumber, newSerialNumber) {
-    return new Promise((resolve, reject) => {
-        DeviceActions.trigger.sendDetachRequest(usbdev, interfaceNumber)
-            .catch(console.error)
-            .then(() => {
-                setTimeout(() => {
-                    lister.once('conflated', deviceMap => {
-                        lister.stop();
-                        if (deviceMap.has(newSerialNumber)) {
-                            resolve(deviceMap.get(newSerialNumber));
-                        } else {
-                            reject(new Error('something attached, but not what we expected'));
-                        }
-                    })
-                        .once('error', () => {})
-                        .start();
-                }, 1000);
-            });
-    });
+function testChoose() {
+    chooseDevice().then(device => {
+        const ud = device.usb || device.nordicUsb || device.nordicDfu || device.seggerUsb;
+        if (!ud) {
+            console.log('Device has no USB interface');
+            return;
+        }
+        const usbdev = ud.device;
+
+        const dfuMode = DeviceActions.isDeviceInDFUMode(device);
+        if (dfuMode) {
+            console.log('Device is already in DFU mode');
+            return;
+        }
+        usbdev.open();
+        const interfaceNumber = DeviceActions.trigger.getDFUInterfaceNumber(usbdev);
+
+        if (interfaceNumber < 0) {
+            console.log('Device has no DFU interface', usbdev.interfaces);
+            return;
+        }
+
+        DeviceActions.trigger.getSemVersion(usbdev, interfaceNumber)
+            .then(semver => console.log('Application semver:', semver))
+            .then(() => DeviceActions.trigger.getDfuInfo(usbdev, interfaceNumber))
+            .then(dfuInfo => console.log('DFU Info:', dfuInfo))
+            .then(() => DeviceActions.trigger.predictSerialNumberAfterReset(usbdev))
+            .then(newSerNr => {
+                console.log('Serial number after reset should be:', newSerNr);
+                return DeviceActions.detachAndWaitFor(usbdev, interfaceNumber, newSerNr);
+            })
+            .then(dfuDevice => {
+                console.log('found', dfuDevice);
+            })
+            .catch(console.error);
+    })
+        .catch(error => {
+            console.log(error.message);
+        });
 }
 
-chooseDevice().then(device => {
-    const ud = device.usb || device.nordicUsb || device.nordicDfu || device.seggerUsb;
-    if (!ud) {
-        console.log('Device has no USB interface');
-        return;
-    }
-    const usbdev = ud.device;
-
-    const dfuMode = DeviceActions.isDeviceInDFUMode(device);
-    if (dfuMode) {
-        console.log('Device is already in DFU mode');
-        return;
-    }
-
-    const interfaceNumber = DeviceActions.trigger.getDFUInterfaceNumber(usbdev);
-
-    if (interfaceNumber < 0) {
-        console.log('Device has no DFU interface');
-        return;
-    }
-
-    DeviceActions.trigger.getSemVersion(usbdev, interfaceNumber)
-        .then(semver => console.log('Application semver:', semver))
-        .then(() => DeviceActions.trigger.getDfuInfo(usbdev, interfaceNumber))
-        .then(dfuInfo => console.log('DFU Info:', dfuInfo))
-        .then(() => DeviceActions.trigger.predictSerialNumberAfterReset(usbdev))
-        .then(newSerNr => {
-            console.log('Serial number after reset should be:', newSerNr);
-            return detachAndWaitFor(usbdev, interfaceNumber, newSerNr);
-        })
-        .then(dfuDevice => {
-            console.log('found', dfuDevice);
-        })
-        .catch(console.error);
-})
-    .catch(error => {
+async function testPrepare() {
+    try {
+        const preparedDevice = await DeviceActions.prepareDevice(
+            await chooseDevice(),
+            {
+                dfu: {
+                    pca10056: {
+                        fw: path.resolve(__dirname, 'fw/rssi-10056.hex'),
+                        semver: 'rssi_cdc_acm 2.0.0+dfuMar-27-2018-12-41-04',
+                    },
+                    pca10059: {
+                        fw: path.resolve(__dirname, 'fw/rssi-10059.hex'),
+                        semver: 'rssi_cdc_acm 2.0.0+dfuMar-27-2018-12-41-04',
+                    },
+                },
+                needSerialport: true,
+            },
+            {
+                promiseConfirm: async message => (await inquirer.prompt([{
+                    type: 'confirm',
+                    name: 'isConfirmed',
+                    message,
+                    default: false,
+                }])).isConfirmed,
+                promiseChoice: async (message, choices) => (await inquirer.prompt([{
+                    type: 'list',
+                    name: 'choice',
+                    message,
+                    choices,
+                }])).choice,
+            },
+        );
+        console.log('Device is ready to be opened:', preparedDevice);
+    } catch (error) {
         console.log(error.message);
-    });
+    }
+}
+
+testPrepare();
