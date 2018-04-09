@@ -5,7 +5,7 @@ prepareDevice(
     {
         jprog: {
             nrf52: {
-                fw: 'fw/rssi-uart-pca10040.hex',
+                fw: path.resolve(__dirname, 'fw/rssi-10040.hex'),
                 fwVersion: 'rssi-fw-1.0.0',
                 fwIdAddress: 0x2000,
             }
