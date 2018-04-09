@@ -142,6 +142,13 @@ async function testPrepare() {
                         semver: 'rssi_cdc_acm 2.0.0+dfuMar-27-2018-12-41-04',
                     },
                 },
+                jprog: {
+                    nrf52: {
+                        fw: path.resolve(__dirname, 'fw/rssi-10040.hex'),
+                        fwVersion: 'rssi-fw-1.0.0',
+                        fwIdAddress: 0x2000,
+                    },
+                },
                 needSerialport: true,
             },
             {
