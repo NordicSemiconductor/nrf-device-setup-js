@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 - 2017, Nordic Semiconductor ASA
+/* Copyright (c) 2015 - 2018, Nordic Semiconductor ASA
  *
  * All rights reserved.
  *
@@ -35,17 +35,13 @@
  */
 
 import nrfjprog from 'pc-nrfjprog-js';
+import Debug from 'debug';
+
+const debug = Debug('device-actions:jprog');
 
 const DeviceFamily = {
-    nrf52: 1,
-};
-
-const jprog = {
-    nrf52: {
-        fw: 'fw/rssi-uart-pca10040.hex',
-        fwVersion: 'rssi-fw-1.0.0',
-        fwIdAddress: 0x2000,
-    },
+    [nrfjprog.NRF51_FAMILY]: 'nrf51',
+    [nrfjprog.NRF52_FAMILY]: 'nrf52',
 };
 
 function read(serialNumber, address, length) {
@@ -84,43 +80,50 @@ function program(serialNumber, path) {
     });
 }
 
-export function validateFirmware(serialNumber, { onValid, onInvalid }) {
-    return dispatch => {
-        read(serialNumber, FIRMWARE_ID_ADDRESS, FIRMWARE_ID.length)
-            .then(contents => {
-                const data = Buffer.from(contents).toString();
-                if (data === FIRMWARE_ID) {
-                    onValid();
-                } else {
-                    onInvalid();
-                }
-            })
-            .catch(err => {
-                dispatch({ type: 'FIRMWARE_DIALOG_HIDE' });
-                dispatch({
-                    type: 'ERROR_DIALOG_SHOW',
-                    message: `Error when validating firmware: ${err.message}`,
-                });
-            });
-    };
+export function open(device) {
+    return new Promise((resolve, reject) => {
+        nrfjprog.open(device.serialNumber, err => (err ? reject(err) : resolve()));
+    });
 }
 
-export function programFirmware(serialNumber, { onSuccess }) {
-    return dispatch => {
-        getDeviceInfo(serialNumber)
-            .then(deviceInfo => {
-                if (deviceInfo.family !== DEVICE_FAMILY_NRF52) {
-                    throw new Error(`${serialNumber} is not a nRF52 devkit`);
-                }
-                return program(serialNumber, FIRMWARE_PATH);
-            })
-            .then(onSuccess)
-            .catch(err => {
-                dispatch({ type: 'FIRMWARE_DIALOG_HIDE' });
-                dispatch({
-                    type: 'ERROR_DIALOG_SHOW',
-                    message: `Error when programming: ${err.message}`,
-                });
-            });
-    };
+export function close(device) {
+    return new Promise((resolve, reject) => {
+        nrfjprog.close(device.serialNumber, err => (err ? reject(err) : resolve()));
+    });
+}
+
+export async function getDeviceFamily(device) {
+    let deviceInfo;
+    try {
+        deviceInfo = await getDeviceInfo(device.serialNumber);
+    } catch (error) {
+        throw new Error(`Error when getting device info ${error.message}`);
+    }
+    const family = DeviceFamily[deviceInfo.family];
+    if (!family) {
+        throw new Error('Couldn\'t get device family');
+    }
+    return family;
+}
+
+export async function validateFirmware(device, firmwareFamily) {
+    const { fwIdAddress, fwVersion } = firmwareFamily;
+    let contents;
+    try {
+        contents = await read(device.serialNumber, fwIdAddress, fwVersion.length);
+    } catch (error) {
+        throw new Error(`Error when validating firmware ${error.message}`);
+    }
+    const data = Buffer.from(contents).toString();
+    return (data === fwVersion);
+}
+
+export async function programFirmware(device, firmwareFamily) {
+    try {
+        debug(`Programming ${device.serialNumber} with ${firmwareFamily.fw}`);
+        await program(device.serialNumber, firmwareFamily.fw);
+    } catch (programError) {
+        throw new Error(`Error when programming ${programError.message}`);
+    }
+    return device;
 }
