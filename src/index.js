@@ -224,11 +224,34 @@ export function prepareDevice(
         }
 
         if (jprog) {
-            if (selectedDevice.jlink) {
-                // JProg.validateFirmware(serialNumber, { onValid, onInvalid })
-
-                // do programming with jprog
-                return reject(new Error('TODO: jprog to be implemented'));
+            if (selectedDevice.jlink && jprog) {
+                let firmwareFamily;
+                return JProg.open(selectedDevice)
+                    .then(() => JProg.getDeviceFamily(selectedDevice))
+                    .then(family => {
+                        firmwareFamily = jprog[family];
+                        if (!firmwareFamily) {
+                            throw new Error(`No firmware defined for ${family} family`);
+                        }
+                    })
+                    .then(() => JProg.validateFirmware(selectedDevice, firmwareFamily))
+                    .then(valid => {
+                        if (valid) {
+                            debug('Applicaton firmware id matches');
+                            return selectedDevice;
+                        }
+                        return Promise.resolve()
+                            .then(async () => {
+                                if (!promiseConfirm) return;
+                                if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
+                                    throw new Error('Preparation cancelled by user');
+                                }
+                            })
+                            .then(() => JProg.programFirmware(selectedDevice, firmwareFamily));
+                    })
+                    .then(resolve)
+                    .catch(reject)
+                    .then(() => JProg.close(selectedDevice));
             }
         }
 
