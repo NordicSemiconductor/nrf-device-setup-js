@@ -2,6 +2,7 @@
 import { prepareDevice } from 'nrf-device-actions';
 
 prepareDevice(
+    selectedDevice,
     {
         jprog: {
             nrf52: {
