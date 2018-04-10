@@ -325,36 +325,34 @@ function prepareDevice(
             }
         }
 
-        if (jprog) {
-            if (selectedDevice.jlink && jprog) {
-                let firmwareFamily;
-                return openJLink(selectedDevice)
-                    .then(() => getDeviceFamily(selectedDevice))
-                    .then(family => {
-                        firmwareFamily = jprog[family];
-                        if (!firmwareFamily) {
-                            throw new Error(`No firmware defined for ${family} family`);
-                        }
-                    })
-                    .then(() => validateFirmware(selectedDevice, firmwareFamily))
-                    .then(valid => {
-                        if (valid) {
-                            debug('Applicaton firmware id matches');
-                            return selectedDevice;
-                        }
-                        return Promise.resolve()
-                            .then(async () => {
-                                if (!promiseConfirm) return;
-                                if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
-                                    throw new Error('Preparation cancelled by user');
-                                }
-                            })
-                            .then(() => programFirmware(selectedDevice, firmwareFamily));
-                    })
-                    .then(resolve)
-                    .catch(reject)
-                    .then(() => closeJLink(selectedDevice));
-            }
+        if (jprog && selectedDevice.jlink) {
+            let firmwareFamily;
+            return openJLink(selectedDevice)
+                .then(() => getDeviceFamily(selectedDevice))
+                .then(family => {
+                    firmwareFamily = jprog[family];
+                    if (!firmwareFamily) {
+                        throw new Error(`No firmware defined for ${family} family`);
+                    }
+                })
+                .then(() => validateFirmware(selectedDevice, firmwareFamily))
+                .then(valid => {
+                    if (valid) {
+                        debug('Applicaton firmware id matches');
+                        return selectedDevice;
+                    }
+                    return Promise.resolve()
+                        .then(async () => {
+                            if (!promiseConfirm) return;
+                            if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
+                                throw new Error('Preparation cancelled by user');
+                            }
+                        })
+                        .then(() => programFirmware(selectedDevice, firmwareFamily));
+                })
+                .then(resolve)
+                .catch(reject)
+                .then(() => closeJLink(selectedDevice));
         }
 
         debug('Selected device cannot be prepared, maybe the app still can use it');
