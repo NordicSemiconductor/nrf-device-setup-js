@@ -126,7 +126,6 @@ function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister({
 function detachAndWaitFor(usbdev, interfaceNumber, serialNumber) {
     debug('Sending detach, will wait for attach');
     return sendDetachRequest(usbdev, interfaceNumber)
-        .catch(debugError)
         .then(() => waitForDevice(serialNumber));
 }
 
