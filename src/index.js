@@ -57,7 +57,12 @@ import {
 const debug = Debug('device-actions');
 const debugError = Debug('device-actions:error');
 
-
+/**
+ * Check if the device is currently running DFU Bootloader
+ *
+ * @param {object} device nrf-device-lister device
+ * @returns {boolean} true if device is currently in DFU Bootloader
+ */
 function isDeviceInDFUBootloader(device) {
     if (!device) {
         return false;
@@ -73,6 +78,14 @@ function isDeviceInDFUBootloader(device) {
     return false;
 }
 
+/**
+ * Waits 3 times 500ms for a device to be listed by nrf-devce-lister
+ *
+ * @param {string} serialNumber of the device expected to appear
+ * @param {number} retry counter
+ * @param {object} lister instanceof DeviceLister
+ * @returns {Promise} resolved to the expected device
+ */
 function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister({
     nordicUsb: true, nordicDfu: true, serialport: true,
 })) {
@@ -102,7 +115,14 @@ function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister({
     });
 }
 
-
+/**
+ * Sends a detach request to a device and waits until it gets reattached.
+ *
+ * @param {object} usbdev instance of usb device
+ * @param {number} interfaceNumber of the trigger interface
+ * @param {string} serialNumber of the device expected after reattach
+ * @return {Promise} resolves to reattached device
+ */
 function detachAndWaitFor(usbdev, interfaceNumber, serialNumber) {
     debug('Sending detach, will wait for attach');
     return sendDetachRequest(usbdev, interfaceNumber)
@@ -110,14 +130,27 @@ function detachAndWaitFor(usbdev, interfaceNumber, serialNumber) {
         .then(() => waitForDevice(serialNumber));
 }
 
+/**
+ * Calculates SHA256 hash of image
+ *
+ * @param {Uint8Array} image to calculate hash from
+ * @return {Buffer} SHA256 hash
+ */
 function calculateSHA256Hash(image) {
     const digest = createHash('sha256');
     digest.update(image);
     return Buffer.from(digest.digest().reverse());
 }
 
-function firmwareImageFromFile(filename) {
-    const memMap = fromHex(fs.readFileSync(filename));
+
+/**
+ * Loads firmware image from HEX file
+ *
+ * @param {string} filepath path of HEX file
+ * @return {Uint8Array} the loaded firmware
+ */
+function firmwareImageFromFile(filepath) {
+    const memMap = fromHex(fs.readFileSync(filepath));
     let startAddress;
     let endAddress;
     memMap.forEach((block, address) => {
@@ -127,15 +160,26 @@ function firmwareImageFromFile(filename) {
     return memMap.slicePad(startAddress, endAddress - startAddress);
 }
 
+/**
+ * Prepares a device which is expected to be in DFU Bootlader.
+ * First it loads the firmware from HEX file specified by dfu argument,
+ * then performs the DFU operation.
+ * This causes the device to be detached, so finally it waits for it to be attached again.
+ *
+ * @param {object} device nrf-device-lister's device
+ * @param {object} dfu configuration object for performing the DFU
+ * @returns {Promise} resolved to prepared device
+ */
 async function prepareInDFUBootloader(device, dfu) {
     const { comName } = device.serialport;
     debug(`${device.serialNumber} on ${comName} is now in DFU-Bootloader...`);
 
-    const firmwareImage = firmwareImageFromFile(dfu.fw);
+    const { fw, semver } = dfu;
+    const firmwareImage = firmwareImageFromFile(fw);
 
     const initPacketParams = new InitPacket()
         .set('fwType', FwType.APPLICATION)
-        .set('fwVersion', dfu.semver)
+        .set('fwVersion', semver)
         .set('hashType', HashType.SHA256)
         .set('hash', calculateSHA256Hash(firmwareImage))
         .set('appSize', firmwareImage.length)
@@ -158,11 +202,57 @@ async function prepareInDFUBootloader(device, dfu) {
     return waitForDevice(device.serialNumber);
 }
 
+/**
+ * Prepares a device listed by nrf-device-lister with expected application firmware
+ * configured by options for different device types.
+ * Based on the device type it decides whether it should be programmed by DFU or JProg.
+ * After successful programming it returns a Promise resolved to the prepared device.
+ *
+ * @example
+ * const preparedDevice = await prepareDevice(selectedDevice,
+ *     {
+ *         dfu: {
+ *             // can have several firmwares defined, the key will be offered to choose from
+ *             pca10059: {
+ *                 fw: path.resolve(__dirname, 'fw/rssi-10059.hex'),
+ *                 semver: 'rssi_cdc_acm 2.0.0+dfuMar-27-2018-12-41-04',
+ *             },
+ *         },
+ *         jprog: {
+ *             nrf52: {
+ *                 fw: path.resolve(__dirname, 'fw/rssi-10040.hex'),
+ *                 fwVersion: 'rssi-fw-1.0.0',
+ *                 fwIdAddress: 0x2000,
+ *             },
+ *         },
+ *         needSerialport: true,
+ *     },
+ *     {
+ *         // called if programming is needed to be confirmed
+ *         promiseConfirm: async message => (await inquirer.prompt([{
+ *             type: 'confirm', name: 'isConfirmed', message, default: false,
+ *         }])).isConfirmed,
+ *
+ *         // called if user need make a choice e.g. multiple DFU firmwares are defined
+ *         promiseChoice: async (message, choices) => (await inquirer.prompt([{
+ *             type: 'list', name: 'choice', message, choices,
+ *         }])).choice,
+ *     },
+ * );
+ *
+ * @param {object} selectedDevice nrf-device-lister's device
+ * @param {object} options { jprog, dfu, needSerialport }
+ * @param {object} actions { promiseChoice, promiseConfirm }
+ * @returns {Promise} device prepared
+ */
 function prepareDevice(
     selectedDevice,
-    { jprog, dfu, needSerialport },
-    { promiseConfirm, promiseChoice }
+    options,
+    actions,
 ) {
+    const { jprog, dfu, needSerialport } = options;
+    const { promiseConfirm, promiseChoice } = actions;
+
     return new Promise((resolve, reject) => {
         if (dfu) {
             // check if device is in DFU-Bootlader, it might _only_ have serialport
