@@ -37,7 +37,7 @@ const inquirer = require('inquirer');
 const path = require('path');
 
 const DeviceLister = require('nrf-device-lister');
-const DeviceActions = require('../');
+const { prepareDevice } = require('../');
 
 const traits = {
     usb: false,
@@ -86,50 +86,9 @@ function chooseDevice() {
     });
 }
 
-function testChoose() {
-    chooseDevice().then(device => {
-        const ud = device.usb || device.nordicUsb || device.nordicDfu || device.seggerUsb;
-        if (!ud) {
-            console.log('Device has no USB interface');
-            return;
-        }
-        const usbdev = ud.device;
-
-        const dfuMode = DeviceActions.isDeviceInDFUMode(device);
-        if (dfuMode) {
-            console.log('Device is already in DFU mode');
-            return;
-        }
-        usbdev.open();
-        const interfaceNumber = DeviceActions.trigger.getDFUInterfaceNumber(usbdev);
-
-        if (interfaceNumber < 0) {
-            console.log('Device has no DFU interface', usbdev.interfaces);
-            return;
-        }
-
-        DeviceActions.trigger.getSemVersion(usbdev, interfaceNumber)
-            .then(semver => console.log('Application semver:', semver))
-            .then(() => DeviceActions.trigger.getDfuInfo(usbdev, interfaceNumber))
-            .then(dfuInfo => console.log('DFU Info:', dfuInfo))
-            .then(() => DeviceActions.trigger.predictSerialNumberAfterReset(usbdev))
-            .then(newSerNr => {
-                console.log('Serial number after reset should be:', newSerNr);
-                return DeviceActions.detachAndWaitFor(usbdev, interfaceNumber, newSerNr);
-            })
-            .then(dfuDevice => {
-                console.log('found', dfuDevice);
-            })
-            .catch(console.error);
-    })
-        .catch(error => {
-            console.log(error.message);
-        });
-}
-
 async function testPrepare() {
     try {
-        const preparedDevice = await DeviceActions.prepareDevice(
+        const preparedDevice = await prepareDevice(
             await chooseDevice(),
             {
                 dfu: {
@@ -172,4 +131,4 @@ async function testPrepare() {
     }
 }
 
-testPrepare();
+testPrepare().then(() => process.exit());

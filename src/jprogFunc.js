@@ -80,19 +80,19 @@ function program(serialNumber, path) {
     });
 }
 
-export function open(device) {
+function openJLink(device) {
     return new Promise((resolve, reject) => {
         nrfjprog.open(device.serialNumber, err => (err ? reject(err) : resolve()));
     });
 }
 
-export function close(device) {
+function closeJLink(device) {
     return new Promise((resolve, reject) => {
         nrfjprog.close(device.serialNumber, err => (err ? reject(err) : resolve()));
     });
 }
 
-export async function getDeviceFamily(device) {
+async function getDeviceFamily(device) {
     let deviceInfo;
     try {
         deviceInfo = await getDeviceInfo(device.serialNumber);
@@ -106,7 +106,7 @@ export async function getDeviceFamily(device) {
     return family;
 }
 
-export async function validateFirmware(device, firmwareFamily) {
+async function validateFirmware(device, firmwareFamily) {
     const { fwIdAddress, fwVersion } = firmwareFamily;
     let contents;
     try {
@@ -118,7 +118,7 @@ export async function validateFirmware(device, firmwareFamily) {
     return (data === fwVersion);
 }
 
-export async function programFirmware(device, firmwareFamily) {
+async function programFirmware(device, firmwareFamily) {
     try {
         debug(`Programming ${device.serialNumber} with ${firmwareFamily.fw}`);
         await program(device.serialNumber, firmwareFamily.fw);
@@ -127,3 +127,11 @@ export async function programFirmware(device, firmwareFamily) {
     }
     return device;
 }
+
+export {
+    openJLink,
+    closeJLink,
+    getDeviceFamily,
+    validateFirmware,
+    programFirmware,
+};

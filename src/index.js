@@ -30,23 +30,35 @@
  */
 
 import fs from 'fs';
-import Crypto from 'crypto';
+import { createHash } from 'crypto';
 import SerialPort from 'serialport';
 import Debug from 'debug';
 
 import DeviceLister from 'nrf-device-lister';
-import MemoryMap from 'nrf-intel-hex';
-import * as dfujs from 'pc-nrf-dfu-js';
-import * as initPacket from './util/initPacket';
-import * as trigger from './triggerDfuMode';
-import * as JProg from './jprogFunc';
+import { fromHex } from 'nrf-intel-hex';
+import { DfuUpdates, DfuTransportSerial, DfuOperation } from 'pc-nrf-dfu-js';
+import { InitPacket, FwType, HashType, createInitPacketUint8Array } from './util/initPacket';
+
+import {
+    getDFUInterfaceNumber,
+    getSemVersion,
+    predictSerialNumberAfterReset,
+    sendDetachRequest,
+} from './dfuTrigger';
+
+import {
+    openJLink,
+    closeJLink,
+    getDeviceFamily,
+    validateFirmware,
+    programFirmware,
+} from './jprogFunc';
 
 const debug = Debug('device-actions');
 const debugError = Debug('device-actions:error');
 
-export { trigger };
 
-export function isDeviceInDFUBootloader(device) {
+function isDeviceInDFUBootloader(device) {
     if (!device) {
         return false;
     }
@@ -61,7 +73,7 @@ export function isDeviceInDFUBootloader(device) {
     return false;
 }
 
-export function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister({
+function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister({
     nordicUsb: true, nordicDfu: true, serialport: true,
 })) {
     return new Promise((resolve, reject) => {
@@ -91,21 +103,21 @@ export function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister
 }
 
 
-export function detachAndWaitFor(usbdev, interfaceNumber, serialNumber) {
+function detachAndWaitFor(usbdev, interfaceNumber, serialNumber) {
     debug('Sending detach, will wait for attach');
-    return trigger.sendDetachRequest(usbdev, interfaceNumber)
+    return sendDetachRequest(usbdev, interfaceNumber)
         .catch(debugError)
         .then(() => waitForDevice(serialNumber));
 }
 
 function calculateSHA256Hash(image) {
-    const digest = Crypto.createHash('sha256');
+    const digest = createHash('sha256');
     digest.update(image);
     return Buffer.from(digest.digest().reverse());
 }
 
 function firmwareImageFromFile(filename) {
-    const memMap = MemoryMap.fromHex(fs.readFileSync(filename));
+    const memMap = fromHex(fs.readFileSync(filename));
     let startAddress;
     let endAddress;
     memMap.forEach((block, address) => {
@@ -121,23 +133,23 @@ async function prepareInDFUBootloader(device, dfu) {
 
     const firmwareImage = firmwareImageFromFile(dfu.fw);
 
-    const initPacketParams = new initPacket.InitPacket()
-        .set('fwType', initPacket.FwType.APPLICATION)
+    const initPacketParams = new InitPacket()
+        .set('fwType', FwType.APPLICATION)
         .set('fwVersion', dfu.semver)
-        .set('hashType', initPacket.HashType.SHA256)
+        .set('hashType', HashType.SHA256)
         .set('hash', calculateSHA256Hash(firmwareImage))
         .set('appSize', firmwareImage.length)
         .set('sdReq', 0);
-    const packet = await initPacket.createInitPacketUint8Array(initPacketParams);
+    const packet = await createInitPacketUint8Array(initPacketParams);
 
-    const firmwareUpdates = new dfujs.DfuUpdates([{
+    const firmwareUpdates = new DfuUpdates([{
         initPacket: packet,
         firmwareImage,
     }]);
 
     const port = new SerialPort(comName, { baudRate: 115200, autoOpen: false });
-    const serialTransport = new dfujs.DfuTransportSerial(port, 0);
-    const dfuOperation = new dfujs.DfuOperation(firmwareUpdates, serialTransport);
+    const serialTransport = new DfuTransportSerial(port, 0);
+    const dfuOperation = new DfuOperation(firmwareUpdates, serialTransport);
 
     await dfuOperation.start(true);
     debug('DFU completed successfully!');
@@ -146,7 +158,7 @@ async function prepareInDFUBootloader(device, dfu) {
     return waitForDevice(device.serialNumber);
 }
 
-export function prepareDevice(
+function prepareDevice(
     selectedDevice,
     { jprog, dfu, needSerialport },
     { promiseConfirm, promiseChoice }
@@ -180,10 +192,10 @@ export function prepareDevice(
 
             if (usbdevice) {
                 const usbdev = usbdevice.device;
-                const interfaceNumber = trigger.getDFUInterfaceNumber(usbdev);
+                const interfaceNumber = getDFUInterfaceNumber(usbdev);
                 if (interfaceNumber >= 0) {
                     debug('Device has DFU trigger interface, probably in Application mode');
-                    return trigger.getSemVersion(usbdev, interfaceNumber)
+                    return getSemVersion(usbdev, interfaceNumber)
                         .then(semver => {
                             if (semver === dfu.semver) {
                                 if (needSerialport && selectedDevice.serialport) {
@@ -193,7 +205,7 @@ export function prepareDevice(
                                 return reject(new Error('Missing serial port'));
                             }
                             debug('Device requires different firmware');
-                            return trigger.predictSerialNumberAfterReset(usbdev)
+                            return predictSerialNumberAfterReset(usbdev)
                                 .then(newSerNr => {
                                     debug('Serial number after reset should be:', newSerNr);
                                     return detachAndWaitFor(usbdev, interfaceNumber, newSerNr);
@@ -226,15 +238,15 @@ export function prepareDevice(
         if (jprog) {
             if (selectedDevice.jlink && jprog) {
                 let firmwareFamily;
-                return JProg.open(selectedDevice)
-                    .then(() => JProg.getDeviceFamily(selectedDevice))
+                return openJLink(selectedDevice)
+                    .then(() => getDeviceFamily(selectedDevice))
                     .then(family => {
                         firmwareFamily = jprog[family];
                         if (!firmwareFamily) {
                             throw new Error(`No firmware defined for ${family} family`);
                         }
                     })
-                    .then(() => JProg.validateFirmware(selectedDevice, firmwareFamily))
+                    .then(() => validateFirmware(selectedDevice, firmwareFamily))
                     .then(valid => {
                         if (valid) {
                             debug('Applicaton firmware id matches');
@@ -247,11 +259,11 @@ export function prepareDevice(
                                     throw new Error('Preparation cancelled by user');
                                 }
                             })
-                            .then(() => JProg.programFirmware(selectedDevice, firmwareFamily));
+                            .then(() => programFirmware(selectedDevice, firmwareFamily));
                     })
                     .then(resolve)
                     .catch(reject)
-                    .then(() => JProg.close(selectedDevice));
+                    .then(() => closeJLink(selectedDevice));
             }
         }
 
@@ -259,3 +271,5 @@ export function prepareDevice(
         return resolve(selectedDevice);
     });
 }
+
+export default { prepareDevice };

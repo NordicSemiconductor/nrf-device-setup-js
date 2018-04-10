@@ -31,7 +31,10 @@
 
 /* eslint no-bitwise: 0 */
 
-const usb = require('usb');
+import usb from 'usb';
+import Debug from 'debug';
+
+const debug = Debug('device-actions:trigger');
 
 const ReqTypeInterfaceClass = usb.LIBUSB_REQUEST_TYPE_CLASS | usb.LIBUSB_RECIPIENT_INTERFACE;
 const ReqTypeIN = ReqTypeInterfaceClass | usb.LIBUSB_ENDPOINT_IN;
@@ -61,23 +64,23 @@ const openDecorator = decoratee => (...args) => {
     }
     try {
         usbdev.open();
-    } catch (e) { console.error(e); }
+    } catch (e) { debug(e.message); }
     return decoratee(...args)
         .then(result => {
             try {
                 usbdev.close();
-            } catch (e) { console.error(e); }
+            } catch (e) { debug(e.message); }
             return result;
         });
 };
 
-export function getDFUInterfaceNumber(usbdev) {
+function getDFUInterfaceNumber(usbdev) {
     const wasClosed = !(usbdev.interfaces instanceof Array);
     if (wasClosed) {
         try {
             usbdev.open();
         } catch (error) {
-            console.error(error);
+            debug(error.message);
             return -1;
         }
     }
@@ -92,14 +95,14 @@ export function getDFUInterfaceNumber(usbdev) {
         try {
             usbdev.close();
         } catch (error) {
-            console.error(error);
+            debug(error.message);
         }
     }
 
     return dfuTriggerInterface;
 }
 
-export const getSemVersion = openDecorator((usbdev, interfaceNumber) => (
+const getSemVersion = openDecorator((usbdev, interfaceNumber) => (
     new Promise((resolve, reject) => {
         usbdev.controlTransfer(
             ReqTypeIN,
@@ -112,7 +115,7 @@ export const getSemVersion = openDecorator((usbdev, interfaceNumber) => (
     })
 ));
 
-export const getDfuInfo = openDecorator((usbdev, interfaceNumber) => (
+const getDfuInfo = openDecorator((usbdev, interfaceNumber) => (
     new Promise((resolve, reject) => {
         usbdev.controlTransfer(
             ReqTypeIN,
@@ -136,7 +139,7 @@ export const getDfuInfo = openDecorator((usbdev, interfaceNumber) => (
 
 // TODO: If there's an SDK functionality to predict bootloader serial number,
 // that should be used instead, this serial number is not guaranteed
-export const predictSerialNumberAfterReset = openDecorator(usbdev => (
+const predictSerialNumberAfterReset = openDecorator(usbdev => (
     new Promise((resolve, reject) => {
         usbdev.getStringDescriptor(usbdev.deviceDescriptor.iSerialNumber, (error, data) => (
             error ? reject(error) : resolve(data)
@@ -144,7 +147,7 @@ export const predictSerialNumberAfterReset = openDecorator(usbdev => (
     })
 ));
 
-export const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
+const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
     new Promise(resolve => {
         usbdev.controlTransfer(
             ReqTypeOUT, DFU_DETACH_REQUEST, 0, interfaceNumber, detachReqBuf,
@@ -155,3 +158,11 @@ export const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
         );
     })
 ));
+
+export {
+    getDFUInterfaceNumber,
+    getSemVersion,
+    getDfuInfo,
+    predictSerialNumberAfterReset,
+    sendDetachRequest,
+};
