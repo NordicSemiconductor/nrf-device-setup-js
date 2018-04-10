@@ -109,8 +109,6 @@ async function testPrepare() {
                     },
                 },
                 needSerialport: true,
-            },
-            {
                 promiseConfirm: async message => (await inquirer.prompt([{
                     type: 'confirm',
                     name: 'isConfirmed',

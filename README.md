@@ -25,8 +25,6 @@ prepareDevice(
         },
 
         needSerialport: true,
-    },
-    {
         promiseConfirm,
         promiseChoice,
     }

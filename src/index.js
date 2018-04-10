@@ -225,8 +225,7 @@ async function prepareInDFUBootloader(device, dfu) {
  *             },
  *         },
  *         needSerialport: true,
- *     },
- *     {
+ *
  *         // called if programming is needed to be confirmed
  *         promiseConfirm: async message => (await inquirer.prompt([{
  *             type: 'confirm', name: 'isConfirmed', message, default: false,
@@ -240,17 +239,13 @@ async function prepareInDFUBootloader(device, dfu) {
  * );
  *
  * @param {object} selectedDevice nrf-device-lister's device
- * @param {object} options { jprog, dfu, needSerialport }
- * @param {object} actions { promiseChoice, promiseConfirm }
+ * @param {object} options { jprog, dfu, needSerialport, promiseChoice, promiseConfirm }
  * @returns {Promise} device prepared
  */
-function prepareDevice(
-    selectedDevice,
-    options,
-    actions,
-) {
-    const { jprog, dfu, needSerialport } = options;
-    const { promiseConfirm, promiseChoice } = actions;
+function prepareDevice(selectedDevice, options) {
+    const {
+        jprog, dfu, needSerialport, promiseConfirm, promiseChoice,
+    } = options;
 
     return new Promise((resolve, reject) => {
         if (dfu) {
