@@ -183,7 +183,7 @@ async function prepareInDFUBootloader(device, dfu) {
         .set('hash', calculateSHA256Hash(firmwareImage))
         .set('appSize', firmwareImage.length)
         .set('sdReq', 0);
-    const packet = await createInitPacketUint8Array(initPacketParams);
+    const packet = createInitPacketUint8Array(initPacketParams);
 
     const firmwareUpdates = new DfuUpdates([{
         initPacket: packet,
@@ -271,8 +271,7 @@ function prepareDevice(selectedDevice, options) {
                     .catch(reject);
             }
 
-            const usbdevice = selectedDevice.usb || selectedDevice.nordicUsb
-                || selectedDevice.nordicDfu || selectedDevice.seggerUsb;
+            const usbdevice = selectedDevice.usb;
 
             if (usbdevice) {
                 const usbdev = usbdevice.device;
@@ -281,7 +280,8 @@ function prepareDevice(selectedDevice, options) {
                     debug('Device has DFU trigger interface, probably in Application mode');
                     return getSemVersion(usbdev, interfaceNumber)
                         .then(semver => {
-                            if (semver === dfu.semver) {
+                            debug(`'${semver}'`);
+                            if (Object.keys(dfu).map(key => dfu[key].semver).includes(semver)) {
                                 if (needSerialport && selectedDevice.serialport) {
                                     debug('Device is running the correct fw version and has serial port');
                                     return resolve(selectedDevice);
@@ -319,7 +319,7 @@ function prepareDevice(selectedDevice, options) {
             }
         }
 
-        if (jprog && selectedDevice.jlink) {
+        if (jprog && selectedDevice.traits.includes('jlink')) {
             let firmwareFamily;
             return openJLink(selectedDevice)
                 .then(() => getDeviceFamily(selectedDevice))
@@ -344,9 +344,9 @@ function prepareDevice(selectedDevice, options) {
                         })
                         .then(() => programFirmware(selectedDevice, firmwareFamily));
                 })
-                .then(resolve)
-                .catch(reject)
-                .then(() => closeJLink(selectedDevice));
+                .then(() => closeJLink(selectedDevice))
+                .then(() => resolve(selectedDevice))
+                .catch(reject);
         }
 
         debug('Selected device cannot be prepared, maybe the app still can use it');
