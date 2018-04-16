@@ -35,7 +35,7 @@ import SerialPort from 'serialport';
 import Debug from 'debug';
 
 import DeviceLister from 'nrf-device-lister';
-import { fromHex } from 'nrf-intel-hex';
+import MemoryMap from 'nrf-intel-hex';
 import { DfuUpdates, DfuTransportSerial, DfuOperation } from 'pc-nrf-dfu-js';
 import { InitPacket, FwType, HashType, createInitPacketUint8Array } from './util/initPacket';
 
@@ -149,7 +149,7 @@ function calculateSHA256Hash(image) {
  * @return {Uint8Array} the loaded firmware
  */
 function firmwareImageFromFile(filepath) {
-    const memMap = fromHex(fs.readFileSync(filepath));
+    const memMap = MemoryMap.fromHex(fs.readFileSync(filepath));
     let startAddress;
     let endAddress;
     memMap.forEach((block, address) => {
