@@ -36,7 +36,7 @@
 
 import protobuf from 'protobufjs';
 import { Record } from 'immutable';
-import dfuCcProto from './dfu-cc.json';
+import dfuCcProto from './dfu-cc';
 
 const root = protobuf.Root.fromJSON(dfuCcProto);
 
