@@ -90,7 +90,7 @@ function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister({
     nordicUsb: true, nordicDfu: true, serialport: true,
 })) {
     return new Promise((resolve, reject) => {
-        if (retry > 2) {
+        if (retry > 10) {
             reject(new Error(`Expected serialNumber ${serialNumber} not found`));
             return;
         }
@@ -173,30 +173,63 @@ async function prepareInDFUBootloader(device, dfu) {
     const { comName } = device.serialport;
     debug(`${device.serialNumber} on ${comName} is now in DFU-Bootloader...`);
 
-    const { fw, semver } = dfu;
+    const { fw, softdevice } = dfu;
+    let { params } = dfu;
+    params = params || {};
+
+    if (softdevice) {
+        const firmwareImage = firmwareImageFromFile(softdevice);
+
+        const initPacketParams = new InitPacket()
+            .set('fwType', FwType.SOFTDEVICE)
+            .set('fwVersion', 0xffffffff)
+            .set('hwVersion', params.hwVersion || 52)
+            .set('hashType', HashType.SHA256)
+            .set('hash', calculateSHA256Hash(firmwareImage))
+            .set('sdSize', firmwareImage.length)
+            .set('sdReq', params.sdReq || [0xFE]);
+
+        const packet = createInitPacketUint8Array(initPacketParams);
+
+        const firmwareUpdates = new DfuUpdates([{ initPacket: packet, firmwareImage }]);
+
+        const port = new SerialPort(comName, { baudRate: 115200, autoOpen: false });
+        const serialTransport = new DfuTransportSerial(port, 0);
+        const dfuOperation = new DfuOperation(firmwareUpdates, serialTransport);
+
+        await dfuOperation.start(true);
+        port.close();
+        debug('SoftDevice DFU completed successfully!');
+
+        try {
+            await waitForDevice(device.serialNumber);
+        } catch (error) {
+            debug(error);
+        }
+    }
+
     const firmwareImage = firmwareImageFromFile(fw);
 
     const initPacketParams = new InitPacket()
         .set('fwType', FwType.APPLICATION)
-        .set('fwVersion', semver)
+        .set('fwVersion', params.fwVersion || 4)
+        .set('hwVersion', params.hwVersion || 52)
         .set('hashType', HashType.SHA256)
         .set('hash', calculateSHA256Hash(firmwareImage))
         .set('appSize', firmwareImage.length)
-        .set('sdReq', 0);
+        .set('sdReq', params.sdId || []);
+
     const packet = createInitPacketUint8Array(initPacketParams);
 
-    const firmwareUpdates = new DfuUpdates([{
-        initPacket: packet,
-        firmwareImage,
-    }]);
+    const firmwareUpdates = new DfuUpdates([{ initPacket: packet, firmwareImage }]);
 
     const port = new SerialPort(comName, { baudRate: 115200, autoOpen: false });
     const serialTransport = new DfuTransportSerial(port, 0);
     const dfuOperation = new DfuOperation(firmwareUpdates, serialTransport);
 
     await dfuOperation.start(true);
-    debug('DFU completed successfully!');
     port.close();
+    debug('Application DFU completed successfully!');
 
     return waitForDevice(device.serialNumber);
 }
