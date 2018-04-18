@@ -1,7 +1,7 @@
 ```
-import { prepareDevice } from 'nrf-device-actions';
+import { setupDevice } from 'nrf-device-setup';
 
-prepareDevice(
+setupDevice(
     selectedDevice,
     {
         jprog: {

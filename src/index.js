@@ -145,11 +145,12 @@ function calculateSHA256Hash(image) {
 /**
  * Loads firmware image from HEX file
  *
- * @param {string} filepath path of HEX file
+ * @param {Buffer|string} firmware contents of HEX file if Buffer otherwhise path of HEX file
  * @return {Uint8Array} the loaded firmware
  */
-function firmwareImageFromFile(filepath) {
-    const memMap = MemoryMap.fromHex(fs.readFileSync(filepath));
+function parseFirmwareImage(firmware) {
+    const contents = (firmware instanceof Buffer) ? firmware : fs.readFileSync(firmware);
+    const memMap = MemoryMap.fromHex(contents);
     let startAddress;
     let endAddress;
     memMap.forEach((block, address) => {
@@ -173,12 +174,12 @@ async function prepareInDFUBootloader(device, dfu) {
     const { comName } = device.serialport;
     debug(`${device.serialNumber} on ${comName} is now in DFU-Bootloader...`);
 
-    const { fw, softdevice } = dfu;
+    const { application, softdevice } = dfu;
     let { params } = dfu;
     params = params || {};
 
     if (softdevice) {
-        const firmwareImage = firmwareImageFromFile(softdevice);
+        const firmwareImage = parseFirmwareImage(softdevice);
 
         const initPacketParams = new InitPacket()
             .set('fwType', FwType.SOFTDEVICE)
@@ -208,7 +209,7 @@ async function prepareInDFUBootloader(device, dfu) {
         }
     }
 
-    const firmwareImage = firmwareImageFromFile(fw);
+    const firmwareImage = parseFirmwareImage(application);
 
     const initPacketParams = new InitPacket()
         .set('fwType', FwType.APPLICATION)
@@ -241,7 +242,7 @@ async function prepareInDFUBootloader(device, dfu) {
  * After successful programming it returns a Promise resolved to the prepared device.
  *
  * @example
- * const preparedDevice = await prepareDevice(selectedDevice,
+ * const preparedDevice = await setupDevice(selectedDevice,
  *     {
  *         dfu: {
  *             // can have several firmwares defined, the key will be offered to choose from
@@ -275,7 +276,7 @@ async function prepareInDFUBootloader(device, dfu) {
  * @param {object} options { jprog, dfu, needSerialport, promiseChoice, promiseConfirm }
  * @returns {Promise} device prepared
  */
-function prepareDevice(selectedDevice, options) {
+function setupDevice(selectedDevice, options) {
     const {
         jprog, dfu, needSerialport, promiseConfirm, promiseChoice,
     } = options;
@@ -387,4 +388,4 @@ function prepareDevice(selectedDevice, options) {
     });
 }
 
-export default { prepareDevice };
+export default { setupDevice };

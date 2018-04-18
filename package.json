@@ -1,5 +1,5 @@
 {
-  "name": "nrf-device-actions",
+  "name": "nrf-device-setup",
   "version": "0.1.0",
   "description": "Common USB/serialport/jlink device actions to check/program nRF devices",
   "main": "dist/index.js",
