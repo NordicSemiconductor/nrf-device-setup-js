@@ -92,13 +92,25 @@ async function testPrepare() {
             await chooseDevice(),
             {
                 dfu: {
+                    connectivity: {
+                        fw: path.resolve(__dirname, 'fw/connectivity_6.0_1m_usb.hex'),
+                        softdevice: path.resolve(__dirname, 'fw/s140_nrf52_6.0.0_softdevice.hex'),
+                        semver: 'foo',
+
+                        params: {
+                            hwVersion: 52,
+                            fwVersion: 0xffffffff,
+                            sdReq: [0xA9],
+                            sdId: [0xA9],
+                        },
+                    },
                     pca10056: {
                         fw: path.resolve(__dirname, 'fw/rssi-10056.hex'),
-                        semver: 'rssi_cdc_acm 2.0.0+dfuMar-27-2018-12-41-04',
+                        semver: 'rssi_cdc_acm 2.0.0+dfuApr--9-2018-10-36-11',
                     },
                     pca10059: {
                         fw: path.resolve(__dirname, 'fw/rssi-10059.hex'),
-                        semver: 'rssi_cdc_acm 2.0.0+dfuMar-27-2018-12-41-04',
+                        semver: 'rssi_cdc_acm 2.0.0+dfuApr--9-2018-10-34-11',
                     },
                 },
                 jprog: {
