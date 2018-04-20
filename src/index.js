@@ -316,11 +316,11 @@ function setupDevice(selectedDevice, options) {
                         .then(semver => {
                             debug(`'${semver}'`);
                             if (Object.keys(dfu).map(key => dfu[key].semver).includes(semver)) {
-                                if (needSerialport && selectedDevice.serialport) {
-                                    debug('Device is running the correct fw version and has serial port');
-                                    return resolve(selectedDevice);
+                                if (needSerialport && !selectedDevice.serialport) {
+                                    return reject(new Error('Missing serial port'));
                                 }
-                                return reject(new Error('Missing serial port'));
+                                debug('Device is running the correct fw version');
+                                return resolve(selectedDevice);
                             }
                             debug('Device requires different firmware');
                             return predictSerialNumberAfterReset(usbdev)
