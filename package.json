@@ -12,7 +12,6 @@
     "lint": "eslint src/ bin/"
   },
   "files": [
-    "bin/",
     "dist/",
     "LICENSE",
     "README.md"
