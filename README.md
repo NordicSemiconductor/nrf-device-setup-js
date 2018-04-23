@@ -10,8 +10,8 @@ setupDevice(
                 fwVersion: 'rssi-fw-1.0.0',
                 fwIdAddress: 0x2000,
             },
-            custom: {
-                fw: path.resolve(__dirname, 'fw/customfirmware.hex'),
+            nrf51: {
+                fw: path.resolve(__dirname, 'fw/customfirmware-for-nrf51.hex'),
                 fwVersion: { 
                     length: 20, // number of bytes to read and provide to validator callback
                     validator: data => {
