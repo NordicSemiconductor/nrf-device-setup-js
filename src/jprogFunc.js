@@ -109,11 +109,17 @@ async function getDeviceFamily(device) {
 async function validateFirmware(device, firmwareFamily) {
     const { fwIdAddress, fwVersion } = firmwareFamily;
     let contents;
+
     try {
         contents = await read(device.serialNumber, fwIdAddress, fwVersion.length);
     } catch (error) {
         throw new Error(`Error when validating firmware ${error.message}`);
     }
+
+    if (typeof fwVersion === 'object' && typeof fwVersion.validator === 'function') {
+        return fwVersion.validator(contents);
+    }
+
     const data = Buffer.from(contents).toString();
     return (data === fwVersion);
 }
