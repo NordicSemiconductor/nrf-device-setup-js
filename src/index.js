@@ -49,6 +49,7 @@ import {
 import {
     openJLink,
     closeJLink,
+    verifySerialPortAvailable,
     getDeviceFamily,
     validateFirmware,
     programFirmware,
@@ -355,7 +356,8 @@ function setupDevice(selectedDevice, options) {
 
         if (jprog && selectedDevice.traits.includes('jlink')) {
             let firmwareFamily;
-            return openJLink(selectedDevice)
+            return verifySerialPortAvailable(selectedDevice)
+                .then(() => openJLink(selectedDevice))
                 .then(() => getDeviceFamily(selectedDevice))
                 .then(family => {
                     firmwareFamily = jprog[family];
