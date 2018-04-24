@@ -134,15 +134,35 @@ function verifySerialPortAvailable(device) {
     });
 }
 
+/**
+ * Calls nrfjprog.open() with the serial number of the given device
+ *
+ * @param {object} device Device object, ref. nrf-device-lister.
+ * @returns {Promise} Resolves to the given device, or rejects with the nrfjprog error
+ */
 function openJLink(device) {
+    if (!device.traits.includes('jlink')) {
+        return Promise.reject(new Error('Device with serial number ' +
+            device.serialNumber + ' is not a jlink probe'));
+    }
     return new Promise((resolve, reject) => {
-        nrfjprog.open(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve()));
+        nrfjprog.open(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve(device)));
     });
 }
 
+/**
+ * Calls nrfjprog.close() with the serial number of the given device
+ *
+ * @param {object} device Device object, ref. nrf-device-lister.
+ * @returns {Promise} Resolves to the given device, or rejects with the nrfjprog error
+ */
 function closeJLink(device) {
+    if (!device.traits.includes('jlink')) {
+        return Promise.reject(new Error('Device with serial number ' +
+            device.serialNumber + ' is not a jlink probe'));
+    }
     return new Promise((resolve, reject) => {
-        nrfjprog.close(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve()));
+        nrfjprog.close(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve(device)));
     });
 }
 
