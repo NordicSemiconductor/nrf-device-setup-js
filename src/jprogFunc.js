@@ -45,9 +45,22 @@ const DeviceFamily = {
     [nrfjprog.NRF52_FAMILY]: 'nrf52',
 };
 
+function serialNumberToInt(serialNumber) {
+    console.log(`serialNumberToInt ${serialNumber} ${typeof serialNumber}`);
+    if (typeof serialNumber !== 'string' && typeof serialNumber !== 'number') {
+        throw new Error(`Argument serialNumber is not of type string or number, but ${typeof serialNumber}.`);
+    }
+
+    if (typeof serialNumber === 'number') {
+        return serialNumber;
+    }
+
+    return Number.parseInt(serialNumber, 10);
+}
+
 function read(serialNumber, address, length) {
     return new Promise((resolve, reject) => {
-        nrfjprog.read(serialNumber, address, length, (err, contents) => {
+        nrfjprog.read(serialNumberToInt(serialNumber), address, length, (err, contents) => {
             if (err) {
                 reject(err);
             } else {
@@ -59,7 +72,7 @@ function read(serialNumber, address, length) {
 
 function getDeviceInfo(serialNumber) {
     return new Promise((resolve, reject) => {
-        nrfjprog.getDeviceInfo(serialNumber, (err, deviceInfo) => {
+        nrfjprog.getDeviceInfo(serialNumberToInt(serialNumber), (err, deviceInfo) => {
             if (err) {
                 reject(err);
             } else {
@@ -71,7 +84,7 @@ function getDeviceInfo(serialNumber) {
 
 function program(serialNumber, path) {
     return new Promise((resolve, reject) => {
-        nrfjprog.program(serialNumber, path, {}, err => {
+        nrfjprog.program(serialNumberToInt(serialNumber), path, {}, err => {
             if (err) {
                 reject(err);
             } else {
@@ -115,20 +128,20 @@ function verifySerialPortAvailable(device) {
 
 function openJLink(device) {
     return new Promise((resolve, reject) => {
-        nrfjprog.open(device.serialNumber, err => (err ? reject(err) : resolve()));
+        nrfjprog.open(serialNumberToInt(device.serialNumber), err => (err ? reject(err) : resolve()));
     });
 }
 
 function closeJLink(device) {
     return new Promise((resolve, reject) => {
-        nrfjprog.close(device.serialNumber, err => (err ? reject(err) : resolve()));
+        nrfjprog.close(serialNumberToInt(device.serialNumber), err => (err ? reject(err) : resolve()));
     });
 }
 
 async function getDeviceFamily(device) {
     let deviceInfo;
     try {
-        deviceInfo = await getDeviceInfo(device.serialNumber);
+        deviceInfo = await getDeviceInfo(serialNumberToInt(device.serialNumber));
     } catch (error) {
         throw new Error(`Error when getting device info ${error.message}`);
     }
@@ -144,7 +157,7 @@ async function validateFirmware(device, firmwareFamily) {
     let contents;
 
     try {
-        contents = await read(device.serialNumber, fwIdAddress, fwVersion.length);
+        contents = await read(serialNumberToInt(device.serialNumber), fwIdAddress, fwVersion.length);
     } catch (error) {
         throw new Error(`Error when validating firmware ${error.message}`);
     }
@@ -160,7 +173,7 @@ async function validateFirmware(device, firmwareFamily) {
 async function programFirmware(device, firmwareFamily) {
     try {
         debug(`Programming ${device.serialNumber} with ${firmwareFamily.fw}`);
-        await program(device.serialNumber, firmwareFamily.fw);
+        await program(serialNumberToInt(device.serialNumber), firmwareFamily.fw);
     } catch (programError) {
         throw new Error(`Error when programming ${programError.message}`);
     }
