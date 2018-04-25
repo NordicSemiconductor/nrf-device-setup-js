@@ -35,6 +35,7 @@
  */
 
 import nrfjprog from 'pc-nrfjprog-js';
+import SerialPort from 'serialport';
 import Debug from 'debug';
 
 const debug = Debug('device-actions:jprog');
@@ -75,6 +76,38 @@ function program(serialNumber, path) {
                 reject(err);
             } else {
                 resolve();
+            }
+        });
+    });
+}
+
+/**
+ * Try to open and close the given serial port to see if it is available. This
+ * is needed to identify if a SEGGER J-Link device is in a bad state. If
+ * pc-nrfjprog-js tries to interact with a device in bad state, it will hang
+ * indefinitely.
+ *
+ * @param {object} device Device object, ref. nrf-device-lister.
+ * @returns {Promise} Promise that resolves if available, and rejects if not.
+ */
+function verifySerialPortAvailable(device) {
+    if (!device.serialport) {
+        return Promise.reject(new Error('No serial port available for device with ' +
+            `serial number ${device.serialNumber}`));
+    }
+    return new Promise((resolve, reject) => {
+        const serialPort = new SerialPort(device.serialport.comName, { autoOpen: false });
+        serialPort.open(openErr => {
+            if (openErr) {
+                reject(openErr);
+            } else {
+                serialPort.close(closeErr => {
+                    if (closeErr) {
+                        reject(closeErr);
+                    } else {
+                        resolve();
+                    }
+                });
             }
         });
     });
@@ -137,6 +170,7 @@ async function programFirmware(device, firmwareFamily) {
 export {
     openJLink,
     closeJLink,
+    verifySerialPortAvailable,
     getDeviceFamily,
     validateFirmware,
     programFirmware,
