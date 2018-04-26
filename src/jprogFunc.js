@@ -69,9 +69,26 @@ function getDeviceInfo(serialNumber) {
     });
 }
 
-function program(serialNumber, path) {
+/**
+ * Program the device with the given serial number with the given firmware
+ * using nrfjprog.
+ *
+ * @param {Number} serialNumber The serial number of the device.
+ * @param {String|Buffer} firmware Firmware path or firmware contents as buffer.
+ * @returns {Promise} Promise that resolves if successful or rejects with error.
+ */
+function program(serialNumber, firmware) {
+    let fw;
+    const options = {};
+    if (firmware instanceof Buffer) {
+        fw = firmware.toString('utf-8');
+        const INPUT_FORMAT_HEX_STRING = 1;
+        options.inputFormat = INPUT_FORMAT_HEX_STRING;
+    } else {
+        fw = firmware;
+    }
     return new Promise((resolve, reject) => {
-        nrfjprog.program(serialNumber, path, {}, err => {
+        nrfjprog.program(serialNumber, fw, options, err => {
             if (err) {
                 reject(err);
             } else {
