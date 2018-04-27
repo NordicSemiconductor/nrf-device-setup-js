@@ -137,16 +137,6 @@ const getDfuInfo = openDecorator((usbdev, interfaceNumber) => (
     })
 ));
 
-// TODO: If there's an SDK functionality to predict bootloader serial number,
-// that should be used instead, this serial number is not guaranteed
-const predictSerialNumberAfterReset = openDecorator(usbdev => (
-    new Promise((resolve, reject) => {
-        usbdev.getStringDescriptor(usbdev.deviceDescriptor.iSerialNumber, (error, data) => (
-            error ? reject(error) : resolve(data)
-        ));
-    })
-));
-
 const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
     new Promise(resolve => {
         usbdev.controlTransfer(
@@ -163,6 +153,5 @@ export {
     getDFUInterfaceNumber,
     getSemVersion,
     getDfuInfo,
-    predictSerialNumberAfterReset,
     sendDetachRequest,
 };
