@@ -44,7 +44,6 @@ import * as jprogFunc from './jprogFunc';
 const {
     getDFUInterfaceNumber,
     getSemVersion,
-    predictSerialNumberAfterReset,
     sendDetachRequest,
 } = dfuTrigger;
 
@@ -330,11 +329,11 @@ export function setupDevice(selectedDevice, options) {
                                 return resolve(selectedDevice);
                             }
                             debug('Device requires different firmware');
-                            return predictSerialNumberAfterReset(usbdev)
-                                .then(newSerNr => {
-                                    debug('Serial number after reset should be:', newSerNr);
-                                    return detachAndWaitFor(usbdev, interfaceNumber, newSerNr);
-                                })
+                            return detachAndWaitFor(
+                                usbdev,
+                                interfaceNumber,
+                                selectedDevice.serialNumber,
+                            )
                                 .then(async device => {
                                     if (!promiseConfirm) return device;
                                     if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {

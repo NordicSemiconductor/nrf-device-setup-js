@@ -31,14 +31,12 @@
 
 import * as initPacket from './util/initPacket';
 import * as dfuTrigger from './dfuTrigger';
-import * as jprogFunc from './jprogFunc';
 import { setupDevice, waitForDevice, detachAndWaitFor } from './setupDevice';
 
 export default {
     setupDevice,
     waitForDevice,
     detachAndWaitFor,
-    jprogFunc,
     dfuTrigger,
     initPacket,
 };
