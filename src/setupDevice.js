@@ -202,7 +202,7 @@ function parseFirmwareImage(firmware) {
  * then performs the DFU operation.
  * This causes the device to be detached, so finally it waits for it to be attached again.
  *
- * @param {object} device nrf-device-lister's device
+ * @param {object} dev nrf-device-lister's device
  * @param {object} dfu configuration object for performing the DFU
  * @returns {Promise} resolved to prepared device
  */
@@ -212,9 +212,8 @@ async function prepareInDFUBootloader(dev, dfu) {
     if (!isDeviceInDFUBootloader(device)) {
         const usbdev = device.usb.device;
         debug('Switching to bootloader mode.');
-        const newSerNr = await predictSerialNumberAfterReset(usbdev);
-        debug('Serial number after reset should be:', newSerNr);
-        device = await detachAndWaitFor(usbdev, getDFUInterfaceNumber(usbdev), newSerNr);
+        debug('Serial number after reset should be:', device.serialNumber);
+        device = await detachAndWaitFor(usbdev, getDFUInterfaceNumber(usbdev), device.serialNumber);
     }
 
     const { comName } = device.serialport;

@@ -142,11 +142,13 @@ function verifySerialPortAvailable(device) {
  */
 function openJLink(device) {
     if (!device.traits.includes('jlink')) {
-        return Promise.reject(new Error('Device with serial number ' +
-            device.serialNumber + ' is not a jlink probe'));
+        return Promise.reject(new Error(`Device with serial number ${
+            device.serialNumber} is not a jlink probe`));
     }
     return new Promise((resolve, reject) => {
-        nrfjprog.open(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve(device)));
+        nrfjprog.open(parseSerial(device.serialNumber),
+                      err => (err ? reject(err) : resolve(device))
+        );
     });
 }
 
@@ -158,11 +160,13 @@ function openJLink(device) {
  */
 function closeJLink(device) {
     if (!device.traits.includes('jlink')) {
-        return Promise.reject(new Error('Device with serial number ' +
-            device.serialNumber + ' is not a jlink probe'));
+        return Promise.reject(new Error(`Device with serial number ${
+            device.serialNumber} is not a jlink probe`));
     }
     return new Promise((resolve, reject) => {
-        nrfjprog.close(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve(device)));
+        nrfjprog.close(parseSerial(device.serialNumber),
+                       err => (err ? reject(err) : resolve(device))
+        );
     });
 }
 
