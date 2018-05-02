@@ -288,7 +288,7 @@ export function setupDevice(selectedDevice, options) {
     } = options;
 
     return new Promise((resolve, reject) => {
-        if (dfu) {
+        if (dfu && Object.keys(dfu).length !== 0) {
             // check if device is in DFU-Bootlader, it might _only_ have serialport
             if (isDeviceInDFUBootloader(selectedDevice)) {
                 debug('Device is in DFU-Bootloader, DFU is defined');
@@ -301,15 +301,9 @@ export function setupDevice(selectedDevice, options) {
                     })
                     .then(() => {
                         const choices = Object.keys(dfu);
-
-                        if (!choices || choices.length === 0) {
-                            return reject(new Error('No firmware defined for DFU programming'));
-                        }
-
                         if (choices.length > 1 && promiseChoice) {
                             return promiseChoice('Which firmware do you want to program?', choices);
                         }
-
                         return choices.pop();
                     })
                     .then(choice => prepareInDFUBootloader(selectedDevice, dfu[choice]))
@@ -349,15 +343,9 @@ export function setupDevice(selectedDevice, options) {
                                 })
                                 .then(async device => {
                                     const choices = Object.keys(dfu);
-
-                                    if (!choices || choices.length === 0) {
-                                        return reject(new Error('No firmware defined for DFU programming'));
-                                    }
-
                                     if (choices.length > 1 && promiseChoice) {
                                         return { device, choice: await promiseChoice('Which firmware do you want to program?', choices) };
                                     }
-
                                     return { device, choice: choices.pop() };
                                 })
                                 .then(({ device, choice }) => (
