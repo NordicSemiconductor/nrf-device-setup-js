@@ -74,6 +74,31 @@ const openDecorator = decoratee => (...args) => {
         });
 };
 
+/**
+ * Asserts that the given interface number exists in the given (open) USB Device,
+ * and that the class, subclass and protocol match.
+ * Returns nothing on success, but throws an error if the assertion fails.
+ *
+ * @param {Device} usbdev Instance of USB's Device
+ * @param {number} interfaceNumber 0-indexed interface number to check
+ */
+function assertDfuTriggerInterface(usbdev, interfaceNumber) {
+    if (!(usbdev.interfaces instanceof Array)) {
+        throw new Error('USB Device must be open before performing any operations on the DFU trigger interface');
+    }
+    const iface = usbdev.interfaces[interfaceNumber]
+    if (!iface) {
+        throw new Error('Interface number ' + interfaceNumber + ' does not exist on USB device; cannot perform DFU trigger operation.');
+    }
+
+    if (iface.descriptor.bInterfaceClass !== 255 ||
+        iface.descriptor.bInterfaceSubClass !== 1 ||
+        iface.descriptor.bInterfaceProtocol !== 1
+    ) {
+        throw new Error('Interface number ' + interfaceNumber + ' does not look like a DFU trigger interface; cannot perform DFU trigger operation.');
+    }
+}
+
 function getDFUInterfaceNumber(usbdev) {
     const wasClosed = !(usbdev.interfaces instanceof Array);
     if (wasClosed) {
@@ -104,6 +129,7 @@ function getDFUInterfaceNumber(usbdev) {
 
 const getSemVersion = openDecorator((usbdev, interfaceNumber) => (
     new Promise((resolve, reject) => {
+        assertDfuTriggerInterface(usbdev, interfaceNumber);
         usbdev.controlTransfer(
             ReqTypeIN,
             NORDIC_SEM_VER_REQUEST, 0, interfaceNumber, 256, (error, data) => (
@@ -117,6 +143,7 @@ const getSemVersion = openDecorator((usbdev, interfaceNumber) => (
 
 const getDfuInfo = openDecorator((usbdev, interfaceNumber) => (
     new Promise((resolve, reject) => {
+        assertDfuTriggerInterface(usbdev, interfaceNumber);
         usbdev.controlTransfer(
             ReqTypeIN,
             NORDIC_DFU_INFO_REQUEST, 0, interfaceNumber, nordicInfoStructSize,
@@ -139,6 +166,7 @@ const getDfuInfo = openDecorator((usbdev, interfaceNumber) => (
 
 const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
     new Promise(resolve => {
+        assertDfuTriggerInterface(usbdev, interfaceNumber);
         usbdev.controlTransfer(
             ReqTypeOUT, DFU_DETACH_REQUEST, 0, interfaceNumber, detachReqBuf,
             () => {
