@@ -138,12 +138,26 @@ const getDfuInfo = openDecorator((usbdev, interfaceNumber) => (
 ));
 
 const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
-    new Promise(resolve => {
+    new Promise((resolve, reject) => {
         usbdev.controlTransfer(
             ReqTypeOUT, DFU_DETACH_REQUEST, 0, interfaceNumber, detachReqBuf,
-            () => {
-                // Device is expected to disappear, any further calls would fail
-                resolve();
+            (err, data) => {
+                // If the detach is sucessfull, the target device will reboot
+                // before sending a response, so the expected result is that
+                // the control transfer will stall.
+                if (err &&
+                    err.errno === usb.LIBUSB_TRANSFER_STALL &&
+                    err.message === 'LIBUSB_TRANSFER_STALL') {
+                    resolve();
+                } else if (err &&
+                    err.errno === usb.LIBUSB_ERROR_IO &&
+                    err.message === 'LIBUSB_ERROR_IO') {
+                    // This edge case only happens when using the "libusb" kernel
+                    // driver on win32 (not "winusb", not "libusbk")
+                    resolve();
+                } else {
+                    reject(new Error('USB DFU detach request sent, but device does not seem to have rebooted'));
+                }
             }
         );
     })
