@@ -288,7 +288,7 @@ export function setupDevice(selectedDevice, options) {
     } = options;
 
     return new Promise((resolve, reject) => {
-        if (dfu) {
+        if (dfu && Object.keys(dfu).length !== 0) {
             // check if device is in DFU-Bootlader, it might _only_ have serialport
             if (isDeviceInDFUBootloader(selectedDevice)) {
                 debug('Device is in DFU-Bootloader, DFU is defined');
