@@ -142,7 +142,7 @@ const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
         usbdev.controlTransfer(
             ReqTypeOUT, DFU_DETACH_REQUEST, 0, interfaceNumber, detachReqBuf,
             (err, data) => {
-                // If the detach is sucessfull, the target device will reboot
+                // If the detach is successful, the target device will reboot
                 // before sending a response, so the expected result is that
                 // the control transfer will stall.
                 if (err &&
