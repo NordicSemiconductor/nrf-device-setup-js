@@ -61,8 +61,8 @@ const {
     programFirmware,
 } = jprogFunc;
 
-const debug = Debug('device-actions');
-const debugError = Debug('device-actions:error');
+const debug = Debug('device-setup');
+const debugError = Debug('device-setup:error');
 
 /**
  * Check if the device is currently running DFU Bootloader
@@ -86,39 +86,46 @@ function isDeviceInDFUBootloader(device) {
 }
 
 /**
- * Waits 3 times 500ms for a device to be listed by nrf-devce-lister
+ * Waits until a device (with a matching serial number) is listed by
+ * nrf-device-lister, up to a maximum of `timeout` milliseconds.
  *
  * @param {string} serialNumber of the device expected to appear
- * @param {number} retry counter
- * @param {object} lister instanceof DeviceLister
+ * @param {number} timeout Timeout, in milliseconds, to wait for device enumeration
  * @returns {Promise} resolved to the expected device
  */
-export function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister({
-    nordicUsb: true, nordicDfu: true, serialport: true,
-})) {
-    return new Promise((resolve, reject) => {
-        if (retry > 10) {
-            reject(new Error(`Expected serialNumber ${serialNumber} not found`));
-            return;
-        }
-        debug(`waiting a bit... then looking for ${serialNumber}, retry #${retry}`);
+export function waitForDevice(serialNumber, timeout = 5000) {
+    debug(`Will wait for device ${serialNumber}`);
 
-        setTimeout(() => {
-            lister.once('conflated', deviceMap => {
+    const lister = new DeviceLister({
+        nordicUsb: true, nordicDfu: true, serialport: true,
+    });
+
+    return new Promise((resolve, reject) => {
+        let timeoutId;
+
+        function checkConflation(deviceMap) {
+            const device = deviceMap.get(serialNumber);
+            if (device && device.serialport) {
+                clearTimeout(timeoutId);
+                lister.removeListener('conflated', checkConflation);
+                lister.removeListener('error', debugError);
                 lister.stop();
-                lister.removeAllListeners('error');
-                const device = deviceMap.get(serialNumber);
-                if (device && device.serialport) {
-                    debug(`... found ${serialNumber}`);
-                    return resolve(device);
-                }
-                return waitForDevice(serialNumber, retry + 1, lister)
-                    .then(resolve)
-                    .catch(reject);
-            })
-                .on('error', debugError)
-                .start();
-        }, 500);
+                debug(`... found ${serialNumber}`);
+                resolve(device);
+            }
+        }
+
+        timeoutId = setTimeout(() => {
+            debug(`Timeout when waiting for attachment of device with serial number ${serialNumber}`);
+            lister.removeListener('conflated', checkConflation);
+            lister.removeListener('error', debugError);
+            lister.stop();
+            reject(new Error(`Timeout while waiting for device  ${serialNumber} to be attached and enumerated`));
+        }, timeout);
+
+        lister.on('error', debugError);
+        lister.on('conflated', checkConflation);
+        lister.start();
     });
 }
 
