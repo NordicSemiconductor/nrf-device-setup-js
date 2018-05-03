@@ -45,9 +45,13 @@ const DeviceFamily = {
     [nrfjprog.NRF52_FAMILY]: 'nrf52',
 };
 
+function parseSerial(serialNumber) {
+    return parseInt(serialNumber, 10);
+}
+
 function read(serialNumber, address, length) {
     return new Promise((resolve, reject) => {
-        nrfjprog.read(serialNumber, address, length, (err, contents) => {
+        nrfjprog.read(parseSerial(serialNumber), address, length, (err, contents) => {
             if (err) {
                 reject(err);
             } else {
@@ -59,7 +63,7 @@ function read(serialNumber, address, length) {
 
 function getDeviceInfo(serialNumber) {
     return new Promise((resolve, reject) => {
-        nrfjprog.getDeviceInfo(serialNumber, (err, deviceInfo) => {
+        nrfjprog.getDeviceInfo(parseSerial(serialNumber), (err, deviceInfo) => {
             if (err) {
                 reject(err);
             } else {
@@ -73,7 +77,7 @@ function getDeviceInfo(serialNumber) {
  * Program the device with the given serial number with the given firmware
  * using nrfjprog.
  *
- * @param {Number} serialNumber The serial number of the device.
+ * @param {String|Number} serialNumber The serial number of the device.
  * @param {String|Buffer} firmware Firmware path or firmware contents as buffer.
  * @returns {Promise} Promise that resolves if successful or rejects with error.
  */
@@ -88,7 +92,7 @@ function program(serialNumber, firmware) {
         fw = firmware;
     }
     return new Promise((resolve, reject) => {
-        nrfjprog.program(serialNumber, fw, options, err => {
+        nrfjprog.program(parseSerial(serialNumber), fw, options, err => {
             if (err) {
                 reject(err);
             } else {
@@ -132,13 +136,13 @@ function verifySerialPortAvailable(device) {
 
 function openJLink(device) {
     return new Promise((resolve, reject) => {
-        nrfjprog.open(device.serialNumber, err => (err ? reject(err) : resolve()));
+        nrfjprog.open(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve()));
     });
 }
 
 function closeJLink(device) {
     return new Promise((resolve, reject) => {
-        nrfjprog.close(device.serialNumber, err => (err ? reject(err) : resolve()));
+        nrfjprog.close(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve()));
     });
 }
 
