@@ -45,6 +45,7 @@ const {
     getDFUInterfaceNumber,
     getSemVersion,
     sendDetachRequest,
+    detach,
 } = dfuTrigger;
 
 const {
@@ -131,7 +132,7 @@ export function waitForDevice(serialNumber, retry = 0, lister = new DeviceLister
  */
 export function detachAndWaitFor(usbdev, interfaceNumber, serialNumber) {
     debug('Sending detach, will wait for attach');
-    return sendDetachRequest(usbdev, interfaceNumber)
+    return detach(usbdev)
         .then(() => waitForDevice(serialNumber));
 }
 

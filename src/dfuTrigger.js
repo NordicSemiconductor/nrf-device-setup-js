@@ -167,29 +167,79 @@ const getDfuInfo = openDecorator((usbdev, interfaceNumber) => (
 const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
     new Promise((resolve, reject) => {
         assertDfuTriggerInterface(usbdev, interfaceNumber);
+        debug('Claiming interface ' + interfaceNumber);
+        usbdev.interfaces[interfaceNumber].claim();
+        debug('Sending DFU detach request ');
         usbdev.controlTransfer(
             ReqTypeOUT, DFU_DETACH_REQUEST, 0, interfaceNumber, detachReqBuf,
             (err, data) => {
-                // If the detach is successful, the target device will reboot
-                // before sending a response, so the expected result is that
-                // the control transfer will stall.
-                if (err &&
-                    err.errno === usb.LIBUSB_TRANSFER_STALL &&
-                    err.message === 'LIBUSB_TRANSFER_STALL') {
-                    resolve();
-                } else if (err &&
-                    err.errno === usb.LIBUSB_ERROR_IO &&
-                    err.message === 'LIBUSB_ERROR_IO') {
-                    // This edge case only happens when using the "libusb" kernel
-                    // driver on win32 (not "winusb", not "libusbk")
-                    resolve();
-                } else {
-                    reject(new Error('USB DFU detach request sent, but device does not seem to have rebooted'));
-                }
+
+                debug('Releasing interface ' + interfaceNumber);
+                usbdev.interfaces[interfaceNumber].release(err2=>{
+                    if (err2) {reject(err2);}
+
+
+                    // If the detach is successful, the target device will reboot
+                    // before sending a response, so the expected result is that
+                    // the control transfer will stall.
+                    if (err &&
+                        err.errno === usb.LIBUSB_TRANSFER_STALL &&
+                        err.message === 'LIBUSB_TRANSFER_STALL') {
+                        resolve();
+                    } else if (err &&
+                        err.errno === usb.LIBUSB_ERROR_IO &&
+                        err.message === 'LIBUSB_ERROR_IO') {
+                        // This edge case only happens when using the "libusb" kernel
+                        // driver on win32 (not "winusb", not "libusbk")
+                        resolve();
+                    } else {
+                        debug('DFU detach request did not stall as expected');
+                        reject(new Error('USB DFU detach request sent, but device does not seem to have rebooted'));
+                    }
+                });
+
             }
         );
     })
 ));
+
+/**
+ * Sends a detach request to a nRF USB device running in application mode,
+ * and waits until it reboots out of application mode.
+ *
+ * @param {Device} usbdev Instance of USB's Device
+ * @param {number} timeout Timeout, in milliseconds, to wait for device detachment
+ * @return {Promise} Resolves to undefined
+ */
+export function detach(usbdev, timeout = 5000) {
+    debug('detach', timeout);
+    return new Promise((resolve, reject)=>{
+        function checkDetachment(detachedDev) {
+            if (usbdev === detachedDev) {
+                debug('Detachment successful');
+                clearTimeout(timeoutId);
+                usb.removeListener('detach', checkDetachment);
+                resolve();
+            }
+        }
+
+        const timeoutId = setTimeout(()=>{
+            debug('Timeout when waiting for USB detach event');
+            usb.removeListener('detach', checkDetachment);
+            reject(new Error('USB detach request sent, timeout while waiting for device reboot'))
+        }, timeout);
+
+        usb.on('detach', checkDetachment);
+        const dfuIface = getDFUInterfaceNumber(usbdev);
+
+        sendDetachRequest(usbdev, dfuIface).catch((err)=>{
+            debug('Error when sending detach request');
+            clearTimeout(timeoutId);
+            usb.removeListener('detach', checkDetachment);
+            reject(err);
+        });
+    });
+}
 
 export {
     getDFUInterfaceNumber,
