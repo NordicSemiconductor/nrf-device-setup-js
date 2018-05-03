@@ -44,7 +44,6 @@ import * as jprogFunc from './jprogFunc';
 const {
     getDFUInterfaceNumber,
     getSemVersion,
-    sendDetachRequest,
     detach,
 } = dfuTrigger;
 

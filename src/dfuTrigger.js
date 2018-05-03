@@ -81,6 +81,7 @@ const openDecorator = decoratee => (...args) => {
  *
  * @param {Device} usbdev Instance of USB's Device
  * @param {number} interfaceNumber 0-indexed interface number to check
+ * @return {undefined}
  */
 function assertDfuTriggerInterface(usbdev, interfaceNumber) {
     if (!(usbdev.interfaces instanceof Array)) {
@@ -172,7 +173,7 @@ const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
         debug('Sending DFU detach request ');
         usbdev.controlTransfer(
             ReqTypeOUT, DFU_DETACH_REQUEST, 0, interfaceNumber, detachReqBuf,
-            (err, data) => {
+            err => {
                 debug(`Releasing interface ${interfaceNumber}`);
                 usbdev.interfaces[interfaceNumber].release(err2 => {
                     if (err2) { reject(err2); }
@@ -211,6 +212,8 @@ const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
 export function detach(usbdev, timeout = 5000) {
     debug('detach', timeout);
     return new Promise((resolve, reject) => {
+        let timeoutId;
+
         function checkDetachment(detachedDev) {
             if (usbdev === detachedDev) {
                 debug('Detachment successful');
@@ -220,7 +223,7 @@ export function detach(usbdev, timeout = 5000) {
             }
         }
 
-        const timeoutId = setTimeout(() => {
+        timeoutId = setTimeout(() => {
             debug('Timeout when waiting for USB detach event');
             usb.removeListener('detach', checkDetachment);
             reject(new Error('USB detach request sent, timeout while waiting for device reboot'));
