@@ -44,7 +44,6 @@ import * as jprogFunc from './jprogFunc';
 const {
     getDFUInterfaceNumber,
     getSemVersion,
-    sendDetachRequest,
     detach,
 } = dfuTrigger;
 
@@ -63,6 +62,16 @@ const {
 
 const debug = Debug('device-setup');
 const debugError = Debug('device-setup:error');
+
+/**
+ * Aux function. Returns a promise that resolves after the given time.
+ *
+ * @param {number} ms Time, in milliseconds, to wait until promise resolution
+ * @returns {Promise<undefined>} Promise that resolves after a time
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 /**
  * Check if the device is currently running DFU Bootloader
@@ -218,6 +227,16 @@ async function prepareInDFUBootloader(device, dfu) {
 
         try {
             await waitForDevice(device.serialNumber);
+
+            /*
+             * HACK!!!
+             *
+             * Workaround for node-serialport race condition when opening
+             * a USB CDC ACM right after it's been enumerated.
+             *
+             * See https://github.com/node-serialport/node-serialport/issues/1565
+             */
+            await sleep(250);
         } catch (error) {
             debug(error);
         }
@@ -242,6 +261,7 @@ async function prepareInDFUBootloader(device, dfu) {
     const serialTransport = new DfuTransportSerial(port, 0);
     const dfuOperation = new DfuOperation(firmwareUpdates, serialTransport);
 
+    debug('Starting DFU');
     await dfuOperation.start(true);
     port.close();
     debug('Application DFU completed successfully!');
@@ -315,8 +335,14 @@ export function setupDevice(selectedDevice, options) {
                         return choices.pop();
                     })
                     .then(choice => prepareInDFUBootloader(selectedDevice, dfu[choice]))
-                    .then(resolve)
-                    .catch(reject);
+                    .then(data => {
+                        debug('DFU finished: ', data);
+                        resolve(data);
+                    })
+                    .catch(err => {
+                        debug('DFU failed: ', err);
+                        reject(err);
+                    });
             }
 
             const usbdevice = selectedDevice.usb;
@@ -359,8 +385,14 @@ export function setupDevice(selectedDevice, options) {
                                 .then(({ device, choice }) => (
                                     prepareInDFUBootloader(device, dfu[choice])
                                 ))
-                                .then(resolve)
-                                .catch(reject);
+                                .then(data => {
+                                    debug('DFU finished: ', data);
+                                    resolve(data);
+                                })
+                                .catch(err => {
+                                    debug('DFU failed: ', err);
+                                    reject(err);
+                                });
                         });
                 }
                 debug('Device is not in DFU-Bootloader and has no DFU trigger interface');
