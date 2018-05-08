@@ -202,7 +202,7 @@ async function prepareInDFUBootloader(device, dfu) {
             .set('hashType', HashType.SHA256)
             .set('hash', calculateSHA256Hash(firmwareImage))
             .set('sdSize', firmwareImage.length)
-            .set('sdReq', params.sdReq || [0xFE]);
+            .set('sdReq', params.sdReq || []);
 
         const packet = createInitPacketUint8Array(initPacketParams);
 
