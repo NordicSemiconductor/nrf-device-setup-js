@@ -1,6 +1,6 @@
 {
   "name": "nrf-device-setup",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Common USB/serialport/jlink device actions to check/program nRF devices",
   "main": "dist/index.js",
   "license": "BSD-3",
