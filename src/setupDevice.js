@@ -98,11 +98,16 @@ function isDeviceInDFUBootloader(device) {
  * Waits until a device (with a matching serial number) is listed by
  * nrf-device-lister, up to a maximum of `timeout` milliseconds.
  *
+ * If `expectedTraits` is given, then the device must (in addition to
+ * a matching serial number) also have the given traits. See the
+ * nrf-device-lister library for the full list of traits.
+ *
  * @param {string} serialNumber of the device expected to appear
- * @param {number} timeout Timeout, in milliseconds, to wait for device enumeration
+ * @param {number} [timeout] Timeout, in milliseconds, to wait for device enumeration
+ * @param {Array} [expectedTraits] The traits that the device is expected to have
  * @returns {Promise} resolved to the expected device
  */
-export function waitForDevice(serialNumber, timeout = 5000) {
+export function waitForDevice(serialNumber, timeout = 5000, expectedTraits = ['serialport']) {
     debug(`Will wait for device ${serialNumber}`);
 
     const lister = new DeviceLister({
@@ -114,7 +119,7 @@ export function waitForDevice(serialNumber, timeout = 5000) {
 
         function checkConflation(deviceMap) {
             const device = deviceMap.get(serialNumber);
-            if (device && device.serialport) {
+            if (device && expectedTraits.every(trait => device.traits.includes(trait))) {
                 clearTimeout(timeoutId);
                 lister.removeListener('conflated', checkConflation);
                 lister.removeListener('error', debugError);
@@ -266,7 +271,7 @@ async function prepareInDFUBootloader(device, dfu) {
     port.close();
     debug('Application DFU completed successfully!');
 
-    return waitForDevice(device.serialNumber);
+    return waitForDevice(device.serialNumber, 5000, ['serialport', 'nordicUsb', 'nordicDfu']);
 }
 
 /**
