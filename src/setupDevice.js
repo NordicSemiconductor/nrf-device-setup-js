@@ -227,7 +227,6 @@ async function prepareInDFUBootloader(device, dfu) {
         const dfuOperation = new DfuOperation(firmwareUpdates, serialTransport);
 
         await dfuOperation.start(true);
-        port.close();
         debug('SoftDevice DFU completed successfully!');
 
         try {
@@ -268,7 +267,6 @@ async function prepareInDFUBootloader(device, dfu) {
 
     debug('Starting DFU');
     await dfuOperation.start(true);
-    port.close();
     debug('Application DFU completed successfully!');
 
     return waitForDevice(device.serialNumber, 5000, ['serialport', 'nordicUsb', 'nordicDfu']);
