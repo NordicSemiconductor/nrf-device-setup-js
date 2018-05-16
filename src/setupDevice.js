@@ -231,16 +231,6 @@ async function prepareInDFUBootloader(device, dfu) {
 
         try {
             await waitForDevice(device.serialNumber);
-
-            /*
-             * HACK!!!
-             *
-             * Workaround for node-serialport race condition when opening
-             * a USB CDC ACM right after it's been enumerated.
-             *
-             * See https://github.com/node-serialport/node-serialport/issues/1565
-             */
-            await sleep(250);
         } catch (error) {
             debug(error);
         }
