@@ -31,12 +31,11 @@
 
 import fs from 'fs';
 import { createHash } from 'crypto';
-import SerialPort from 'serialport';
 import Debug from 'debug';
 
 import DeviceLister from 'nrf-device-lister';
 import MemoryMap from 'nrf-intel-hex';
-import { DfuUpdates, DfuTransportSerial, DfuOperation } from 'pc-nrf-dfu-js';
+import { DfuUpdates, DfuTransportUsbSerial, DfuOperation } from 'pc-nrf-dfu-js';
 import * as initPacket from './util/initPacket';
 import * as dfuTrigger from './dfuTrigger';
 import * as jprogFunc from './jprogFunc';
@@ -206,6 +205,7 @@ async function prepareInDFUBootloader(device, dfu) {
     let { params } = dfu;
     params = params || {};
 
+    const firmwareUpdates = [];
     if (softdevice) {
         const firmwareImage = parseFirmwareImage(softdevice);
 
@@ -219,32 +219,7 @@ async function prepareInDFUBootloader(device, dfu) {
             .set('sdReq', params.sdReq || []);
 
         const packet = createInitPacketUint8Array(initPacketParams);
-
-        const firmwareUpdates = new DfuUpdates([{ initPacket: packet, firmwareImage }]);
-
-        const port = new SerialPort(comName, { baudRate: 115200, autoOpen: false });
-        const serialTransport = new DfuTransportSerial(port, 0);
-        const dfuOperation = new DfuOperation(firmwareUpdates, serialTransport);
-
-        await dfuOperation.start(true);
-        port.close();
-        debug('SoftDevice DFU completed successfully!');
-
-        try {
-            await waitForDevice(device.serialNumber);
-
-            /*
-             * HACK!!!
-             *
-             * Workaround for node-serialport race condition when opening
-             * a USB CDC ACM right after it's been enumerated.
-             *
-             * See https://github.com/node-serialport/node-serialport/issues/1565
-             */
-            await sleep(250);
-        } catch (error) {
-            debug(error);
-        }
+        firmwareUpdates.push({ initPacket: packet, firmwareImage });
     }
 
     const firmwareImage = parseFirmwareImage(application);
@@ -259,17 +234,14 @@ async function prepareInDFUBootloader(device, dfu) {
         .set('sdReq', params.sdId || []);
 
     const packet = createInitPacketUint8Array(initPacketParams);
+    firmwareUpdates.push({ initPacket: packet, firmwareImage });
 
-    const firmwareUpdates = new DfuUpdates([{ initPacket: packet, firmwareImage }]);
-
-    const port = new SerialPort(comName, { baudRate: 115200, autoOpen: false });
-    const serialTransport = new DfuTransportSerial(port, 0);
-    const dfuOperation = new DfuOperation(firmwareUpdates, serialTransport);
+    const usbSerialTransport = new DfuTransportUsbSerial(device.serialNumber, 0);
+    const dfuOperation = new DfuOperation(new DfuUpdates(firmwareUpdates), usbSerialTransport);
 
     debug('Starting DFU');
     await dfuOperation.start(true);
-    port.close();
-    debug('Application DFU completed successfully!');
+    debug('DFU completed successfully!');
 
     return waitForDevice(device.serialNumber, 5000, ['serialport', 'nordicUsb', 'nordicDfu']);
 }
