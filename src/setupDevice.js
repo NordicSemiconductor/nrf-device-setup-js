@@ -210,13 +210,13 @@ async function validateSerialPort(device, needSerialport) {
     for (let i = 10; i > 1; i -= 1) {
         /* eslint-disable no-await-in-loop */
         await sleep(2000 / i);
-        debug('validating seriaport', device.serialport.comName, i);
+        debug('validating serialport', device.serialport.comName, i);
         if (await checkOpen(device.serialport.comName)) {
             debug('resolving', device);
             return device;
         }
     }
-    throw new Error('couldn`t open seriaport');
+    throw new Error('couldn`t open serialport');
 }
 
 /**
