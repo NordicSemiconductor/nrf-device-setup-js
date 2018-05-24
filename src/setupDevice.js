@@ -32,6 +32,7 @@
 import fs from 'fs';
 import { createHash } from 'crypto';
 import Debug from 'debug';
+import SerialPort from 'serialport';
 
 import DeviceLister from 'nrf-device-lister';
 import MemoryMap from 'nrf-intel-hex';
@@ -188,6 +189,37 @@ function parseFirmwareImage(firmware) {
 }
 
 /**
+ * Ensures that device has a serialport that is ready to be opened
+ * @param {object} device nrf-device-lister's device
+ * @param {boolean} needSerialport indicates if the device is expected to have a serialport
+ * @returns {Promise} resolved to device
+ */
+async function validateSerialPort(device, needSerialport) {
+    if (!needSerialport) {
+        debug('device doesn`t need serialport');
+        return device;
+    }
+
+    const checkOpen = comName => new Promise(resolve => {
+        const port = new SerialPort(comName, { baudRate: 115200 }, err => {
+            if (!err) port.close();
+            resolve(!err);
+        });
+    });
+
+    for (let i = 10; i > 1; i -= 1) {
+        /* eslint-disable no-await-in-loop */
+        await sleep(2000 / i);
+        debug('validating serialport', device.serialport.comName, i);
+        if (await checkOpen(device.serialport.comName)) {
+            debug('resolving', device);
+            return device;
+        }
+    }
+    throw new Error('couldn`t open serialport');
+}
+
+/**
  * Prepares a device which is expected to be in DFU Bootlader.
  * First it loads the firmware from HEX file specified by dfu argument,
  * then performs the DFU operation.
@@ -312,9 +344,10 @@ export function setupDevice(selectedDevice, options) {
                         return choices.pop();
                     })
                     .then(choice => prepareInDFUBootloader(selectedDevice, dfu[choice]))
-                    .then(data => {
-                        debug('DFU finished: ', data);
-                        resolve(data);
+                    .then(device => validateSerialPort(device, needSerialport))
+                    .then(device => {
+                        debug('DFU finished: ', device);
+                        resolve(device);
                     })
                     .catch(err => {
                         debug('DFU failed: ', err);
@@ -362,9 +395,10 @@ export function setupDevice(selectedDevice, options) {
                                 .then(({ device, choice }) => (
                                     prepareInDFUBootloader(device, dfu[choice])
                                 ))
-                                .then(data => {
-                                    debug('DFU finished: ', data);
-                                    resolve(data);
+                                .then(device => validateSerialPort(device, needSerialport))
+                                .then(device => {
+                                    debug('DFU finished: ', device);
+                                    resolve(device);
                                 })
                                 .catch(err => {
                                     debug('DFU failed: ', err);
