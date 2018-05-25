@@ -41,6 +41,11 @@ import * as initPacket from './util/initPacket';
 import * as dfuTrigger from './dfuTrigger';
 import * as jprogFunc from './jprogFunc';
 
+/** 
+ * @const {number} Default wait time for UART port to show up in operating system
+ */
+const DEFAULT_DEVICE_WAIT_TIME = 6000;
+
 const {
     getDFUInterfaceNumber,
     getSemVersion,
@@ -107,7 +112,7 @@ function isDeviceInDFUBootloader(device) {
  * @param {Array} [expectedTraits] The traits that the device is expected to have
  * @returns {Promise} resolved to the expected device
  */
-export function waitForDevice(serialNumber, timeout = 5000, expectedTraits = ['serialport']) {
+export function waitForDevice(serialNumber, timeout = DEFAULT_DEVICE_WAIT_TIME, expectedTraits = ['serialport']) {
     debug(`Will wait for device ${serialNumber}`);
 
     const lister = new DeviceLister({
@@ -275,7 +280,7 @@ async function prepareInDFUBootloader(device, dfu) {
     await dfuOperation.start(true);
     debug('DFU completed successfully!');
 
-    return waitForDevice(device.serialNumber, 5000, ['serialport', 'nordicUsb', 'nordicDfu']);
+    return waitForDevice(device.serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['serialport', 'nordicUsb', 'nordicDfu']);
 }
 
 /**
