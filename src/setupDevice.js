@@ -44,7 +44,7 @@ import * as jprogFunc from './jprogFunc';
 /** 
  * @const {number} DEFAULT_DEVICE_WAIT_TIME Default wait time for UART port to show up in operating system
  */
-const DEFAULT_DEVICE_WAIT_TIME = 6000;
+const DEFAULT_DEVICE_WAIT_TIME = 10000;
 
 const {
     getDFUInterfaceNumber,
