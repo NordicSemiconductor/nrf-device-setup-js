@@ -38,7 +38,7 @@ import nrfjprog from 'pc-nrfjprog-js';
 import SerialPort from 'serialport';
 import Debug from 'debug';
 
-const debug = Debug('device-actions:jprog');
+const debug = Debug('device-setup:jprog');
 
 const DeviceFamily = {
     [nrfjprog.NRF51_FAMILY]: 'nrf51',
