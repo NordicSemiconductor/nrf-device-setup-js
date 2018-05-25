@@ -87,8 +87,20 @@ For USB SDFU devices _pc-nrf-dfu-js_ is used to perform the DFU.
 ```js
 configuration.dfu = {
     pca10056: {
-        fw: path.resolve(__dirname, 'fw/customfirmware-for-pca10056.hex'),
+        application: path.resolve(__dirname, 'fw/customfirmware-for-pca10056.hex'),
+
+        // softdevice is optional, depends on application firmware
+        softdevice: path.resolve(__dirname, 'fw/softdevice.hex'),
+
         semver: 'my-fw-name 1.0.0+dfuJan-01-2018-01-01-01',
+
+        // DFU initPacket related parameters, optional, listed values are default:
+        params: {
+            hwVersion: 52,
+            fwVersion: 4,
+            sdReq: [],
+            sdId: [],
+        }
     }
 }
 ```
@@ -141,7 +153,7 @@ setupDevice(
 
         dfu: {
             pca10056: {
-                fw: path.resolve(__dirname, 'fw/rssi-10056.hex'),
+                application: path.resolve(__dirname, 'fw/rssi-10056.hex'),
                 semver: 'rssi_cdc_acm 2.0.0+dfuMar-27-2018-12-41-04',
             },
         },
