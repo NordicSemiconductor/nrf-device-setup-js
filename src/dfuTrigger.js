@@ -34,7 +34,7 @@
 import usb from 'usb';
 import Debug from 'debug';
 
-const debug = Debug('device-actions:trigger');
+const debug = Debug('device-setup:trigger');
 
 const ReqTypeInterfaceClass = usb.LIBUSB_REQUEST_TYPE_CLASS | usb.LIBUSB_RECIPIENT_INTERFACE;
 const ReqTypeIN = ReqTypeInterfaceClass | usb.LIBUSB_ENDPOINT_IN;
