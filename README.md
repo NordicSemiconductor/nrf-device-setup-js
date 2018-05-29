@@ -22,7 +22,24 @@ The following devices are supported:
 
 ## Installation
 
-`$ npm install nrf-device-setup`
+```
+$ npm install nrf-device-setup
+```
+
+### Dependency requirements
+
+#### JLink devices
+
+Due to dependency on _pc-nrfjprog-js_, installation of lower level tools and libraries are required, for details please refer to [required setup](https://github.com/NordicSemiconductor/pc-nrfjprog-js#required-setup) section.
+
+#### USB SDFU devices
+
+##### Windows
+
+In order to access Nordic USB devices specific drivers must be installed on Windows, which are automatically installed by nRF Connect for Desktop (starting from version 2.4). The drivers can be found [here](https://github.com/NordicSemiconductor/pc-nrfconnect-core/tree/master/build/drivers).
+
+##### Linux
+Linux requires correct permissions to access these devices. For this purpose please install udev rules from [nrf-udev](https://github.com/NordicSemiconductor/nrf-udev) repository, follow instructions there.
 
 ## Usage
 
