@@ -94,14 +94,14 @@ async function testSetup() {
             {
                 dfu: {
                     connectivity: {
-                        application: fs.readFileSync(path.resolve(__dirname, 'fw/connectivity_6.0_1m_usb.hex')),
-                        softdevice: fs.readFileSync(path.resolve(__dirname, 'fw/s140_nrf52_6.0.0_softdevice.hex')),
+                        application: fs.readFileSync(path.resolve(__dirname, 'fw/connectivity_1.2.2_usb_for_s132_3.0.hex')),
+                        softdevice: fs.readFileSync(path.resolve(__dirname, 'fw/s132_nrf52_3.0.0_softdevice.hex')),
                         semver: 'ble-connectivity 0.1.0+Apr-17-2018-10-25-40',
                         params: {
                             hwVersion: 52,
                             fwVersion: 0xffffffff,
-                            sdReq: [0xA9],
-                            sdId: [0xA9],
+                            sdReq: [0],
+                            sdId: [0x8C],
                         },
                     },
                     pca10056: {

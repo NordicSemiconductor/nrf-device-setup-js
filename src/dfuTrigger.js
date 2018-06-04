@@ -31,6 +31,7 @@
 
 /* eslint no-bitwise: 0 */
 
+import os from 'os';
 import usb from 'usb';
 import Debug from 'debug';
 
