@@ -194,7 +194,7 @@ const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
                         // This edge case only happens when using the "libusb" kernel
                         // driver on win32 (not "winusb", not "libusbk")
                         resolve();
-                    } else if (!err && os.platform() === 'darwin') {
+                    } else if (os.platform() === 'darwin') {
                         resolve();
                     } else {
                         debug('DFU detach request did not stall as expected');
