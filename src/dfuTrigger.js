@@ -31,6 +31,7 @@
 
 /* eslint no-bitwise: 0 */
 
+import os from 'os';
 import usb from 'usb';
 import Debug from 'debug';
 
@@ -178,9 +179,11 @@ const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
                 usbdev.interfaces[interfaceNumber].release(err2 => {
                     if (err2) { reject(err2); }
 
-                    // If the detach is successful, the target device will reboot
-                    // before sending a response, so the expected result is that
-                    // the control transfer will stall.
+                    // On Windows, if the detach is successful,
+                    // the target device will reboot before sending a response,
+                    // so the expected result is that the control transfer will stall.
+                    // On MacOS, DFU detach request does not stall as on Windows.
+                    // Just regard it as detaching successfully.
                     if (err &&
                         err.errno === usb.LIBUSB_TRANSFER_STALL &&
                         err.message === 'LIBUSB_TRANSFER_STALL') {
@@ -190,6 +193,8 @@ const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
                         err.message === 'LIBUSB_ERROR_IO') {
                         // This edge case only happens when using the "libusb" kernel
                         // driver on win32 (not "winusb", not "libusbk")
+                        resolve();
+                    } else if (!err && os.platform() === 'darwin') {
                         resolve();
                     } else {
                         debug('DFU detach request did not stall as expected');
