@@ -41,7 +41,7 @@ import * as initPacket from './util/initPacket';
 import * as dfuTrigger from './dfuTrigger';
 import * as jprogFunc from './jprogFunc';
 
-/** 
+/**
  * @const {number} DEFAULT_DEVICE_WAIT_TIME Default wait time for UART port to show up in operating system
  */
 const DEFAULT_DEVICE_WAIT_TIME = 10000;
@@ -441,9 +441,10 @@ export function setupDevice(selectedDevice, options) {
                         })
                         .then(() => programFirmware(selectedDevice, firmwareFamily));
                 })
-                .then(() => closeJLink(selectedDevice))
-                .then(() => resolve(selectedDevice))
-                .catch(reject);
+                .then(
+                    () => { return closeJLink(selectedDevice).then(() => {resolve(selectedDevice)}) },
+                    err => closeJLink(selectedDevice).then(() => { reject(err); })
+                );
         }
 
         debug('Selected device cannot be prepared, maybe the app still can use it');
