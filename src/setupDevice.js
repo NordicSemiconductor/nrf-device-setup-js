@@ -42,7 +42,8 @@ import * as dfuTrigger from './dfuTrigger';
 import * as jprogFunc from './jprogFunc';
 
 /**
- * @const {number} DEFAULT_DEVICE_WAIT_TIME Default wait time for UART port to show up in operating system
+ * @const {number} DEFAULT_DEVICE_WAIT_TIME Default wait time for UART port to
+ * show up in operating system
  */
 const DEFAULT_DEVICE_WAIT_TIME = 10000;
 
@@ -329,11 +330,110 @@ export function setupDevice(selectedDevice, options) {
         jprog, dfu, needSerialport, promiseConfirm, promiseChoice,
     } = options;
 
-    return new Promise((resolve, reject) => {
-        if (dfu && Object.keys(dfu).length !== 0) {
-            // check if device is in DFU-Bootlader, it might _only_ have serialport
-            if (isDeviceInDFUBootloader(selectedDevice)) {
-                debug('Device is in DFU-Bootloader, DFU is defined');
+    if (dfu && Object.keys(dfu).length !== 0) {
+        // check if device is in DFU-Bootlader, it might _only_ have serialport
+        if (isDeviceInDFUBootloader(selectedDevice)) {
+            debug('Device is in DFU-Bootloader, DFU is defined');
+            return Promise.resolve()
+                .then(async () => {
+                    if (!promiseConfirm) return;
+                    if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
+                        throw new Error('Preparation cancelled by user');
+                    }
+                })
+                .then(() => {
+                    const choices = Object.keys(dfu);
+                    if (choices.length > 1 && promiseChoice) {
+                        return promiseChoice('Which firmware do you want to program?', choices);
+                    }
+                    return choices.pop();
+                })
+                .then(choice => prepareInDFUBootloader(selectedDevice, dfu[choice]))
+                .then(device => validateSerialPort(device, needSerialport))
+                .then(device => {
+                    debug('DFU finished: ', device);
+                    return device;
+                })
+                .catch(err => {
+                    debug('DFU failed: ', err);
+                    return Promise.reject(err);
+                });
+        }
+
+
+        const usbdevice = selectedDevice.usb;
+
+        if (usbdevice) {
+            const usbdev = usbdevice.device;
+            const interfaceNumber = getDFUInterfaceNumber(usbdev);
+            if (interfaceNumber >= 0) {
+                debug('Device has DFU trigger interface, probably in Application mode');
+                return getSemVersion(usbdev, interfaceNumber)
+                    .then(semver => {
+                        debug(`'${semver}'`);
+                        if (Object.keys(dfu).map(key => dfu[key].semver).includes(semver)) {
+                            if (needSerialport && !selectedDevice.serialport) {
+                                return Promise.reject(new Error('Missing serial port'));
+                            }
+                            debug('Device is running the correct fw version');
+                            return selectedDevice;
+                        }
+                        debug('Device requires different firmware');
+                        return detachAndWaitFor(
+                            usbdev,
+                            interfaceNumber,
+                            selectedDevice.serialNumber,
+                        )
+                            .then(async device => {
+                                if (!promiseConfirm) return device;
+                                if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
+                                    throw new Error('Preparation cancelled by user');
+                                }
+                                return device;
+                            })
+                            .then(async device => {
+                                const choices = Object.keys(dfu);
+                                if (choices.length > 1 && promiseChoice) {
+                                    return { device, choice: await promiseChoice('Which firmware do you want to program?', choices) };
+                                }
+                                return { device, choice: choices.pop() };
+                            })
+                            .then(({ device, choice }) => (
+                                prepareInDFUBootloader(device, dfu[choice])
+                            ))
+                            .then(device => validateSerialPort(device, needSerialport))
+                            .then(device => {
+                                debug('DFU finished: ', device);
+                                return device;
+                            })
+                            .catch(err => {
+                                debug('DFU failed: ', err);
+                                return Promise.reject(err);
+                            });
+                    });
+            }
+            debug('Device is not in DFU-Bootloader and has no DFU trigger interface');
+        }
+    }
+
+
+    if (jprog && selectedDevice.traits.includes('jlink')) {
+        let firmwareFamily;
+        return verifySerialPortAvailable(selectedDevice)
+            .then(() => openJLink(selectedDevice))
+            .then(() => getDeviceFamily(selectedDevice))
+            .then(family => {
+                firmwareFamily = jprog[family];
+                if (!firmwareFamily) {
+                    throw new Error(`No firmware defined for ${family} family`);
+                }
+            })
+            .then(() => validateFirmware(selectedDevice, firmwareFamily))
+            .then(valid => {
+                if (valid) {
+                    debug('Applicaton firmware id matches');
+                    return selectedDevice;
+                }
                 return Promise.resolve()
                     .then(async () => {
                         if (!promiseConfirm) return;
@@ -341,113 +441,14 @@ export function setupDevice(selectedDevice, options) {
                             throw new Error('Preparation cancelled by user');
                         }
                     })
-                    .then(() => {
-                        const choices = Object.keys(dfu);
-                        if (choices.length > 1 && promiseChoice) {
-                            return promiseChoice('Which firmware do you want to program?', choices);
-                        }
-                        return choices.pop();
-                    })
-                    .then(choice => prepareInDFUBootloader(selectedDevice, dfu[choice]))
-                    .then(device => validateSerialPort(device, needSerialport))
-                    .then(device => {
-                        debug('DFU finished: ', device);
-                        resolve(device);
-                    })
-                    .catch(err => {
-                        debug('DFU failed: ', err);
-                        reject(err);
-                    });
-            }
+                    .then(() => programFirmware(selectedDevice, firmwareFamily));
+            })
+            .then(
+                () => closeJLink(selectedDevice).then(() => selectedDevice),
+                err => closeJLink(selectedDevice).then(() => Promise.reject(err))
+            );
+    }
 
-            const usbdevice = selectedDevice.usb;
-
-            if (usbdevice) {
-                const usbdev = usbdevice.device;
-                const interfaceNumber = getDFUInterfaceNumber(usbdev);
-                if (interfaceNumber >= 0) {
-                    debug('Device has DFU trigger interface, probably in Application mode');
-                    return getSemVersion(usbdev, interfaceNumber)
-                        .then(semver => {
-                            debug(`'${semver}'`);
-                            if (Object.keys(dfu).map(key => dfu[key].semver).includes(semver)) {
-                                if (needSerialport && !selectedDevice.serialport) {
-                                    return reject(new Error('Missing serial port'));
-                                }
-                                debug('Device is running the correct fw version');
-                                return resolve(selectedDevice);
-                            }
-                            debug('Device requires different firmware');
-                            return detachAndWaitFor(
-                                usbdev,
-                                interfaceNumber,
-                                selectedDevice.serialNumber,
-                            )
-                                .then(async device => {
-                                    if (!promiseConfirm) return device;
-                                    if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
-                                        throw new Error('Preparation cancelled by user');
-                                    }
-                                    return device;
-                                })
-                                .then(async device => {
-                                    const choices = Object.keys(dfu);
-                                    if (choices.length > 1 && promiseChoice) {
-                                        return { device, choice: await promiseChoice('Which firmware do you want to program?', choices) };
-                                    }
-                                    return { device, choice: choices.pop() };
-                                })
-                                .then(({ device, choice }) => (
-                                    prepareInDFUBootloader(device, dfu[choice])
-                                ))
-                                .then(device => validateSerialPort(device, needSerialport))
-                                .then(device => {
-                                    debug('DFU finished: ', device);
-                                    resolve(device);
-                                })
-                                .catch(err => {
-                                    debug('DFU failed: ', err);
-                                    reject(err);
-                                });
-                        });
-                }
-                debug('Device is not in DFU-Bootloader and has no DFU trigger interface');
-            }
-        }
-
-        if (jprog && selectedDevice.traits.includes('jlink')) {
-            let firmwareFamily;
-            return verifySerialPortAvailable(selectedDevice)
-                .then(() => openJLink(selectedDevice))
-                .then(() => getDeviceFamily(selectedDevice))
-                .then(family => {
-                    firmwareFamily = jprog[family];
-                    if (!firmwareFamily) {
-                        throw new Error(`No firmware defined for ${family} family`);
-                    }
-                })
-                .then(() => validateFirmware(selectedDevice, firmwareFamily))
-                .then(valid => {
-                    if (valid) {
-                        debug('Applicaton firmware id matches');
-                        return selectedDevice;
-                    }
-                    return Promise.resolve()
-                        .then(async () => {
-                            if (!promiseConfirm) return;
-                            if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
-                                throw new Error('Preparation cancelled by user');
-                            }
-                        })
-                        .then(() => programFirmware(selectedDevice, firmwareFamily));
-                })
-                .then(
-                    () => { return closeJLink(selectedDevice).then(() => {resolve(selectedDevice)}) },
-                    err => closeJLink(selectedDevice).then(() => { reject(err); })
-                );
-        }
-
-        debug('Selected device cannot be prepared, maybe the app still can use it');
-        return resolve(selectedDevice);
-    });
+    debug('Selected device cannot be prepared, maybe the app still can use it');
+    return Promise.resolve(selectedDevice);
 }
