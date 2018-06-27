@@ -301,12 +301,11 @@ async function confirmHelper(promiseConfirm) {
 /**
  * Helper function that calls optional user defined choice e.g. dialog or inquirer.
  *
- * @param {object} dfu dfu configuration
+ * @param {array} choices array of choices
  * @param {function} promiseChoice Promise returning function
  * @returns {Promise} resolves to user selected choice or first element
  */
-async function choiceHelper(dfu, promiseChoice) {
-    const choices = Object.keys(dfu);
+async function choiceHelper(choices, promiseChoice) {
     if (choices.length > 1 && promiseChoice) {
         return promiseChoice('Which firmware do you want to program?', choices);
     }
@@ -364,7 +363,7 @@ export function setupDevice(selectedDevice, options) {
         if (isDeviceInDFUBootloader(selectedDevice)) {
             debug('Device is in DFU-Bootloader, DFU is defined');
             return confirmHelper(promiseConfirm)
-                .then(() => choiceHelper(dfu, promiseChoice))
+                .then(() => choiceHelper(Object.keys(dfu), promiseChoice))
                 .then(choice => prepareInDFUBootloader(selectedDevice, dfu[choice]))
                 .then(device => validateSerialPort(device, needSerialport))
                 .then(device => {
@@ -397,7 +396,7 @@ export function setupDevice(selectedDevice, options) {
                         }
                         debug('Device requires different firmware');
                         return confirmHelper(promiseConfirm)
-                            .then(() => choiceHelper(dfu, promiseChoice))
+                            .then(() => choiceHelper(Object.keys(dfu), promiseChoice))
                             .then(choice => (
                                 detachAndWaitFor(
                                     usbdev,
