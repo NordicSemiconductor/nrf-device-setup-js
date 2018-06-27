@@ -42,12 +42,8 @@ import * as dfuTrigger from './dfuTrigger';
 import * as jprogFunc from './jprogFunc';
 
 /**
-<<<<<<< HEAD
  * @const {number} DEFAULT_DEVICE_WAIT_TIME Default wait time for UART port to
  * show up in operating system
-=======
- * @const {number} DEFAULT_DEVICE_WAIT_TIME Default wait time for UART port to show up in operating system
->>>>>>> Simplified user promises and avoided device change before user interaction
  */
 const DEFAULT_DEVICE_WAIT_TIME = 10000;
 
