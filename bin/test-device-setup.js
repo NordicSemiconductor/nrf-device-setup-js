@@ -96,7 +96,7 @@ async function testSetup() {
                     connectivity: {
                         application: fs.readFileSync(path.resolve(__dirname, 'fw/connectivity_1.2.2_usb_for_s132_3.0.hex')),
                         softdevice: fs.readFileSync(path.resolve(__dirname, 'fw/s132_nrf52_3.0.0_softdevice.hex')),
-                        semver: 'ble-connectivity 0.1.0+Apr-17-2018-10-25-40',
+                        semver: 'ble-connectivity 0.1.0+May-28-2018-12-30-56',
                         params: {
                             hwVersion: 52,
                             fwVersion: 0xffffffff,
