@@ -13,6 +13,7 @@
   "files": [
     "dist/",
     "src/",
+    "bootloader/*.zip",
     "LICENSE",
     "README.md"
   ],
