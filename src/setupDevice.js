@@ -30,6 +30,7 @@
  */
 
 import fs from 'fs';
+import path from 'path';
 import { createHash } from 'crypto';
 import Debug from 'debug';
 import SerialPort from 'serialport';
@@ -46,8 +47,10 @@ import * as jprogFunc from './jprogFunc';
  * show up in operating system
  */
 const DEFAULT_DEVICE_WAIT_TIME = 10000;
-const BOOTLOADER_PATH = require.resolve('../bootloader/graviton_bootloader_v1.0.1-[nRF5_SDK_15.0.1-1.alpha_f76d012].zip');
-const LATEST_BOOTLOADER_VERSION = 3;
+const BASEPATH = path.dirname(require.resolve('.'));
+const LATEST_BOOTLOADER = 'graviton_bootloader_v1.0.1-[nRF5_SDK_15.0.1-1.alpha_f76d012].zip';
+const LATEST_BOOTLOADER_PATH = path.resolve(BASEPATH, '../bootloader', LATEST_BOOTLOADER);
+const LATEST_BOOTLOADER_VERSION = 3; // check with nrfutil pkg display ...
 
 const {
     getDFUInterfaceNumber,
@@ -331,7 +334,7 @@ async function updateBootloader(device) {
     const { comName } = device.serialport;
     debug(`Bootloader for device ${device.serialNumber} on ${comName} will be updated`);
 
-    const updates = await DfuUpdates.fromZipFilePath(BOOTLOADER_PATH);
+    const updates = await DfuUpdates.fromZipFilePath(LATEST_BOOTLOADER_PATH);
     const usbSerialTransport = new DfuTransportUsbSerial(device.serialNumber, 0);
     const dfuOperation = new DfuOperation(updates, usbSerialTransport);
 
