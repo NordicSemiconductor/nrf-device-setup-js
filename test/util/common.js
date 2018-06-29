@@ -35,6 +35,12 @@ const Debug = require('debug');
 
 const debug = Debug('device-setup:test');
 
+/**
+ * Erase the firmware on the given device.
+ *
+ * @param {Object} device Device object from nrf-device-lister.
+ * @returns {Promise<Object>} Resolves with the device object if successful.
+ */
 module.exports.eraseJlinkDevice = device => {
     return new Promise((resolve, reject) => {
         nrfjprog.erase(parseInt(device.serialNumber, 10), {}, error => {
@@ -47,6 +53,14 @@ module.exports.eraseJlinkDevice = device => {
     });
 };
 
+/**
+ * Get the first J-Link device that matches the given serial number
+ * regular expression.
+ *
+ * @param {RegEx} serialNumberRegex Serial number regular expression.
+ * @returns {Promise<Object>} Resolves with a nrf-device-lister device object, or
+ * rejects if no device is found.
+ */
 module.exports.getJlinkDevice = serialNumberRegex => {
     const lister = new DeviceLister({
         serialport: true,
@@ -66,6 +80,12 @@ module.exports.getJlinkDevice = serialNumberRegex => {
         });
 };
 
+/**
+ * Get the first Nordic USB device (traits: nordicUsb, nordicDfu) that can be found.
+ *
+ * @returns {Promise<Object>} Resolves with a nrf-device-lister device object, or
+ * rejects if no device is found.
+ */
 module.exports.getNordicUsbDevice = () => {
     const lister = new DeviceLister({
         serialport: true,
