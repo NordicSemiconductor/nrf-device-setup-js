@@ -284,6 +284,34 @@ async function prepareInDFUBootloader(device, dfu) {
     return waitForDevice(device.serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['serialport', 'nordicUsb', 'nordicDfu']);
 }
 
+
+/**
+ * Helper function that calls optional user defined confirmation e.g. dialog or inquirer.
+ *
+ * @param {function} promiseConfirm Promise returning function
+ * @returns {Promise} resolves to undefined
+ */
+async function confirmHelper(promiseConfirm) {
+    if (!promiseConfirm) return;
+    if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
+        throw new Error('Preparation cancelled by user');
+    }
+}
+
+/**
+ * Helper function that calls optional user defined choice e.g. dialog or inquirer.
+ *
+ * @param {array} choices array of choices
+ * @param {function} promiseChoice Promise returning function
+ * @returns {Promise} resolves to user selected choice or first element
+ */
+async function choiceHelper(choices, promiseChoice) {
+    if (choices.length > 1 && promiseChoice) {
+        return promiseChoice('Which firmware do you want to program?', choices);
+    }
+    return choices.pop();
+}
+
 /**
  * Prepares a device listed by nrf-device-lister with expected application firmware
  * configured by options for different device types.
@@ -334,20 +362,8 @@ export function setupDevice(selectedDevice, options) {
         // check if device is in DFU-Bootlader, it might _only_ have serialport
         if (isDeviceInDFUBootloader(selectedDevice)) {
             debug('Device is in DFU-Bootloader, DFU is defined');
-            return Promise.resolve()
-                .then(async () => {
-                    if (!promiseConfirm) return;
-                    if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
-                        throw new Error('Preparation cancelled by user');
-                    }
-                })
-                .then(() => {
-                    const choices = Object.keys(dfu);
-                    if (choices.length > 1 && promiseChoice) {
-                        return promiseChoice('Which firmware do you want to program?', choices);
-                    }
-                    return choices.pop();
-                })
+            return confirmHelper(promiseConfirm)
+                .then(() => choiceHelper(Object.keys(dfu), promiseChoice))
                 .then(choice => prepareInDFUBootloader(selectedDevice, dfu[choice]))
                 .then(device => validateSerialPort(device, needSerialport))
                 .then(device => {
@@ -379,27 +395,15 @@ export function setupDevice(selectedDevice, options) {
                             return selectedDevice;
                         }
                         debug('Device requires different firmware');
-                        return detachAndWaitFor(
-                            usbdev,
-                            interfaceNumber,
-                            selectedDevice.serialNumber,
-                        )
-                            .then(async device => {
-                                if (!promiseConfirm) return device;
-                                if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
-                                    throw new Error('Preparation cancelled by user');
-                                }
-                                return device;
-                            })
-                            .then(async device => {
-                                const choices = Object.keys(dfu);
-                                if (choices.length > 1 && promiseChoice) {
-                                    return { device, choice: await promiseChoice('Which firmware do you want to program?', choices) };
-                                }
-                                return { device, choice: choices.pop() };
-                            })
-                            .then(({ device, choice }) => (
-                                prepareInDFUBootloader(device, dfu[choice])
+                        return confirmHelper(promiseConfirm)
+                            .then(() => choiceHelper(Object.keys(dfu), promiseChoice))
+                            .then(choice => (
+                                detachAndWaitFor(
+                                    usbdev,
+                                    interfaceNumber,
+                                    selectedDevice.serialNumber,
+                                )
+                                    .then(device => prepareInDFUBootloader(device, dfu[choice]))
                             ))
                             .then(device => validateSerialPort(device, needSerialport))
                             .then(device => {
@@ -431,16 +435,10 @@ export function setupDevice(selectedDevice, options) {
             .then(() => validateFirmware(selectedDevice, firmwareFamily))
             .then(valid => {
                 if (valid) {
-                    debug('Applicaton firmware id matches');
+                    debug('Application firmware id matches');
                     return selectedDevice;
                 }
-                return Promise.resolve()
-                    .then(async () => {
-                        if (!promiseConfirm) return;
-                        if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
-                            throw new Error('Preparation cancelled by user');
-                        }
-                    })
+                return confirmHelper(promiseConfirm)
                     .then(() => programFirmware(selectedDevice, firmwareFamily));
             })
             .then(
