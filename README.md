@@ -193,3 +193,13 @@ setupDevice(
     }
 ) // => Promise with device that is running RSSI fw and has a serialport ready to be opened.
 ```
+
+## Tests
+
+The project comes with automated integration tests in the `test` directory. In order to run the test, at least one nRF51 device, nRF52 device, and nRF52840 dongle must be attached to the PC. To run the tests:
+
+    npm test
+
+To run tests for only one device type, include the name of the test file e.g.
+
+    npm test -- nrf51

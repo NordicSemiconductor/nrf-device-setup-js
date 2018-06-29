@@ -316,7 +316,10 @@ async function choiceHelper(choices, promiseChoice) {
  * Prepares a device listed by nrf-device-lister with expected application firmware
  * configured by options for different device types.
  * Based on the device type it decides whether it should be programmed by DFU or JProg.
- * After successful programming it returns a Promise resolved to the prepared device.
+ * Resolves if the setup was successful. Rejects with an error if the setup failed.
+ * If detailedOutput is enabled, it will resolve with an object on the form
+ * { device: {}, details: { wasProgrammed: [true|false] } }. If not, it will resolve
+ * with the device object only.
  *
  * @example
  * const preparedDevice = await setupDevice(selectedDevice,
@@ -336,6 +339,7 @@ async function choiceHelper(choices, promiseChoice) {
  *             },
  *         },
  *         needSerialport: true,
+ *         detailedOutput: false,
  *
  *         // called if programming is needed to be confirmed
  *         promiseConfirm: async message => (await inquirer.prompt([{
@@ -350,13 +354,26 @@ async function choiceHelper(choices, promiseChoice) {
  * );
  *
  * @param {object} selectedDevice nrf-device-lister's device
- * @param {object} options { jprog, dfu, needSerialport, promiseChoice, promiseConfirm }
- * @returns {Promise} device prepared
+ * @param {object} options Setup options, as shown in the example above. May include
+ * { jprog, dfu, needSerialport, detailedOutput, promiseChoice, promiseConfirm }
+ * @returns {Promise} Resolves with the device object that was set up, or
+ * device and details if detailedOutput is enabled.
  */
 export function setupDevice(selectedDevice, options) {
     const {
-        jprog, dfu, needSerialport, promiseConfirm, promiseChoice,
+        jprog, dfu, needSerialport, detailedOutput, promiseConfirm, promiseChoice,
     } = options;
+
+    // Adds detailed output if enabled in options
+    const createReturnValue = (device, details) => {
+        if (detailedOutput) {
+            return {
+                device,
+                details,
+            };
+        }
+        return device;
+    };
 
     if (dfu && Object.keys(dfu).length !== 0) {
         // check if device is in DFU-Bootlader, it might _only_ have serialport
@@ -368,7 +385,7 @@ export function setupDevice(selectedDevice, options) {
                 .then(device => validateSerialPort(device, needSerialport))
                 .then(device => {
                     debug('DFU finished: ', device);
-                    return device;
+                    return createReturnValue(device, { wasProgrammed: true });
                 })
                 .catch(err => {
                     debug('DFU failed: ', err);
@@ -392,7 +409,7 @@ export function setupDevice(selectedDevice, options) {
                                 return Promise.reject(new Error('Missing serial port'));
                             }
                             debug('Device is running the correct fw version');
-                            return selectedDevice;
+                            return createReturnValue(selectedDevice, { wasProgrammed: false });
                         }
                         debug('Device requires different firmware');
                         return confirmHelper(promiseConfirm)
@@ -408,7 +425,7 @@ export function setupDevice(selectedDevice, options) {
                             .then(device => validateSerialPort(device, needSerialport))
                             .then(device => {
                                 debug('DFU finished: ', device);
-                                return device;
+                                return createReturnValue(device, { wasProgrammed: true });
                             })
                             .catch(err => {
                                 debug('DFU failed: ', err);
@@ -423,6 +440,7 @@ export function setupDevice(selectedDevice, options) {
 
     if (jprog && selectedDevice.traits.includes('jlink')) {
         let firmwareFamily;
+        let wasProgrammed = false;
         return verifySerialPortAvailable(selectedDevice)
             .then(() => openJLink(selectedDevice))
             .then(() => getDeviceFamily(selectedDevice))
@@ -439,14 +457,18 @@ export function setupDevice(selectedDevice, options) {
                     return selectedDevice;
                 }
                 return confirmHelper(promiseConfirm)
-                    .then(() => programFirmware(selectedDevice, firmwareFamily));
+                    .then(() => programFirmware(selectedDevice, firmwareFamily))
+                    .then(() => {
+                        wasProgrammed = true;
+                    });
             })
             .then(
                 () => closeJLink(selectedDevice).then(() => selectedDevice),
                 err => closeJLink(selectedDevice).then(() => Promise.reject(err))
-            );
+            )
+            .then(() => createReturnValue(selectedDevice, { wasProgrammed }));
     }
 
     debug('Selected device cannot be prepared, maybe the app still can use it');
-    return Promise.resolve(selectedDevice);
+    return Promise.resolve(createReturnValue(selectedDevice, { wasProgrammed: false }));
 }
