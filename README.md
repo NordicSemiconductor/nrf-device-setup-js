@@ -68,8 +68,8 @@ const configuration = {
 
     needSerialport: true, // after successful DFU serialport is expected
 
-    // These promises are not required for nRF Connect apps,
-    // they provide a way to handle user interaction when confirmation or choice is to be made
+    // These promises are not required for nRF Connect apps, they provide a way
+    // to handle user interaction when confirmation or choice is to be made, see example below
     promiseConfirm,
     promiseChoice,
 };
@@ -177,6 +177,7 @@ setupDevice(
 
         needSerialport: true,
 
+        // promise returning function that resolves with true/false
         promiseConfirm: async message => (await inquirer.prompt([{
             type: 'confirm',
             name: 'isConfirmed',
@@ -184,6 +185,7 @@ setupDevice(
             default: false,
         }])).isConfirmed,
 
+        // promise returning function that resolves with an element of the input array
         promiseChoice: async (message, choices) => (await inquirer.prompt([{
             type: 'list',
             name: 'choice',
