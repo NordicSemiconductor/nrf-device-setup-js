@@ -53,6 +53,27 @@ module.exports.eraseJlinkDevice = device => {
     });
 };
 
+module.exports.programBootloaderJlinkDevice = (device, filename) => {
+    return new Promise((resolve, reject) => {
+        const serialNumber = parseInt(device.serialNumber, 10);
+        nrfjprog.recover(serialNumber, error => {
+            if (error) {
+                reject(error);
+            } else {
+                const options = {
+                    chip_erase_mode: nrfjprog.ERASE_ALL,
+                    qspi_erase_mode: nrfjprog.ERASE_ALL,
+                    reset: true,
+                };
+                nrfjprog.program(
+                    serialNumber, filename, options,
+                    err => (err ? reject(err) : resolve(device)),
+                );
+            }
+        });
+    });
+};
+
 /**
  * Get the first J-Link device that matches the given serial number
  * regular expression.
@@ -98,6 +119,30 @@ module.exports.getNordicUsbDevice = () => {
             const devices = Array.from(deviceMap.values());
             const device = devices.find(dev => (
                 dev.traits.includes('nordicUsb') || dev.traits.includes('nordicDfu')
+            ));
+            if (device) {
+                return device;
+            }
+            throw new Error('No Nordic USB device found.');
+        });
+};
+
+/**
+ * Get the first Nordic DFU device (traits: serialport) that can be found.
+ *
+ * @returns {Promise<Object>} Resolves with a nrf-device-lister device object, or
+ * rejects if no device is found.
+ */
+module.exports.getNordicDfuDevice = () => {
+    const lister = new DeviceLister({
+        serialport: true,
+    });
+    lister.on('error', error => debug(error.message));
+    return lister.reenumerate()
+        .then(deviceMap => {
+            const devices = Array.from(deviceMap.values());
+            const device = devices.find(dev => (
+                (dev.serialport.vendorId === '1915' && dev.serialport.productId === '521F')
             ));
             if (device) {
                 return device;
