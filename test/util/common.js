@@ -53,6 +53,14 @@ module.exports.eraseJlinkDevice = device => {
     });
 };
 
+/**
+ * Completely erase the device with `recover` functionality, then program it
+ * with bootloader hex file.
+ *
+ * @param {Object} device Device object from nrf-device-lister.
+ * @param {string} filename Filename of the bootloader hex file.
+ * @returns {Promise<Object>} Resolves with the device object if successful.
+ */
 module.exports.programBootloaderJlinkDevice = (device, filename) => {
     return new Promise((resolve, reject) => {
         const serialNumber = parseInt(device.serialNumber, 10);

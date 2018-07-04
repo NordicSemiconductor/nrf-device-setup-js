@@ -43,7 +43,6 @@ const RSSI_OPTIONS = {
             semver: 'rssi_cdc_acm 2.0.0+dfuMay-22-2018-10-43-22',
         },
     },
-    detailedOutput: true,
 };
 
 const CONNECTIVITY_OPTIONS = {
@@ -67,7 +66,6 @@ describe('nrf52840 dongle', () => {
     it('is programmed when firmware is not present, but skips programming when firmware is already present', () => (
         getNordicUsbDevice()
             .then(device => setupDevice(device, RSSI_OPTIONS))
-            .then(result => result.device)
             .then(device => setupDevice(device, CONNECTIVITY_OPTIONS))
             .then(result => {
                 expect(result.details.wasProgrammed).toEqual(true);
