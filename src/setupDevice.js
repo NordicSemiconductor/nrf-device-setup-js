@@ -285,18 +285,20 @@ async function prepareInDFUBootloader(device, dfu) {
     await dfuOperation.start(true);
     debug('DFU completed successfully!');
 
-    return waitForDevice(device.serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['serialport', 'nordicUsb', 'nordicDfu']);
+    return waitForDevice(device.serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['serialport', 'nordicUsb']);
 }
 
 /**
  * Helper function that calls optional user defined confirmation e.g. dialog or inquirer.
  *
  * @param {function} promiseConfirm Promise returning function
- * @returns {Promise} resolves to undefined
+ * @returns {Promise} resolves to boolean
  */
 async function confirmHelper(promiseConfirm) {
-    if (!promiseConfirm) return;
-    if (!await promiseConfirm('Device must be programmed, do you want to proceed?')) {
+    if (!promiseConfirm) return true;
+    try {
+        return await promiseConfirm('Device must be programmed, do you want to proceed?');
+    } catch (err) {
         throw new Error('Preparation cancelled by user');
     }
 }
@@ -342,24 +344,88 @@ async function updateBootloader(device) {
     await dfuOperation.start(true);
     debug('Bootloader DFU completed successfully!');
 
-    return waitForDevice(device.serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['serialport', 'nordicUsb', 'nordicDfu'])
-        .catch(debug);
+    return waitForDevice(device.serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['serialport']);
 }
 
 async function checkConfirmUpdateBootloader(device, expectedBootloaderVersion, promiseConfirm) {
     if (!promiseConfirm) {
         // without explicit consent bootloader will not be updated
-        return;
+        return device;
     }
     const bootloaderVersion = await checkBootloaderVersion(device);
     if (bootloaderVersion >= expectedBootloaderVersion) {
-        return;
+        return device;
     }
-    if (!await promiseConfirm('Bootloader needs to be updated, continue?')) {
+    if (!await promiseConfirm('Newer version of the bootloader is available, do you want to update it?')) {
         debug('Continuing with old bootloader');
-        return;
+        return device;
     }
-    await updateBootloader(device);
+    return updateBootloader(device);
+}
+
+async function ensureBootloaderMode(device, serialNumber) {
+    if (isDeviceInDFUBootloader(device)) {
+        debug('Device is in bootloader mode');
+        return device;
+    }
+    let usbdev = device.usb;
+    let retry = 0;
+    while (!usbdev && retry < 3) {
+        retry += 1;
+        debug('missing usb, looking for it again');
+        usbdev = await waitForDevice(serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['nordicUsb']).usb;
+    }
+    if (!usbdev) {
+        throw new Error('Couldn`t recognize expected nordic usb device');
+    }
+    debug('Trying to trigger bootloader mode');
+    return detachAndWaitFor(
+        usbdev.device,
+        getDFUInterfaceNumber(device.usb.device),
+        serialNumber,
+    );
+}
+
+// Adds detailed output if enabled in options
+const createReturnValue = (device, details, detailedOutput) => {
+    if (detailedOutput) {
+        return {
+            device,
+            details,
+        };
+    }
+    return device;
+};
+
+async function performDFU(selectedDevice, options) {
+    const {
+        dfu, needSerialport, detailedOutput,
+        promiseConfirm, promiseConfirmBootloader, promiseChoice,
+    } = options;
+    const isConfirmed = await confirmHelper(promiseConfirm);
+    if (!isConfirmed) {
+        // go on without DFU
+        return createReturnValue(selectedDevice, { wasProgrammed: false }, detailedOutput);
+    }
+    const choice = await choiceHelper(Object.keys(dfu), promiseChoice);
+
+    try {
+        let device = await ensureBootloaderMode(selectedDevice, selectedDevice.serialNumber);
+        device = await checkConfirmUpdateBootloader(
+            device,
+            LATEST_BOOTLOADER_VERSION,
+            promiseConfirmBootloader || promiseConfirm,
+        );
+        device = await ensureBootloaderMode(device, selectedDevice.serialNumber);
+        device = await prepareInDFUBootloader(device, dfu[choice]);
+        device = await validateSerialPort(device, needSerialport);
+
+        debug('DFU finished: ', device);
+        return createReturnValue(device, { wasProgrammed: true }, detailedOutput);
+    } catch (err) {
+        debug('DFU failed: ', err);
+        throw err;
+    }
 }
 
 /**
@@ -411,45 +477,15 @@ async function checkConfirmUpdateBootloader(device, expectedBootloaderVersion, p
  */
 export function setupDevice(selectedDevice, options) {
     const {
-        jprog, dfu, needSerialport, detailedOutput, promiseConfirm, promiseChoice,
+        jprog, dfu, needSerialport, detailedOutput, promiseConfirm,
     } = options;
-
-    // Adds detailed output if enabled in options
-    const createReturnValue = (device, details) => {
-        if (detailedOutput) {
-            return {
-                device,
-                details,
-            };
-        }
-        return device;
-    };
 
     if (dfu && Object.keys(dfu).length !== 0) {
         // check if device is in DFU-Bootlader, it might _only_ have serialport
         if (isDeviceInDFUBootloader(selectedDevice)) {
             debug('Device is in DFU-Bootloader, DFU is defined');
-            return confirmHelper(promiseConfirm)
-                .then(() => choiceHelper(Object.keys(dfu), promiseChoice))
-                .then(choice => prepareInDFUBootloader(selectedDevice, dfu[choice]))
-                .then(choice => (
-                    checkConfirmUpdateBootloader(
-                        selectedDevice,
-                        LATEST_BOOTLOADER_VERSION,
-                        promiseConfirm,
-                    ).then(() => prepareInDFUBootloader(selectedDevice, dfu[choice]))
-                ))
-                .then(device => validateSerialPort(device, needSerialport))
-                .then(device => {
-                    debug('DFU finished: ', device);
-                    return createReturnValue(device, { wasProgrammed: true });
-                })
-                .catch(err => {
-                    debug('DFU failed: ', err);
-                    return Promise.reject(err);
-                });
+            return performDFU(selectedDevice, options);
         }
-
 
         const usbdevice = selectedDevice.usb;
 
@@ -466,34 +502,13 @@ export function setupDevice(selectedDevice, options) {
                                 return Promise.reject(new Error('Missing serial port'));
                             }
                             debug('Device is running the correct fw version');
-                            return createReturnValue(selectedDevice, { wasProgrammed: false });
+                            return createReturnValue(
+                                selectedDevice,
+                                { wasProgrammed: false }, detailedOutput,
+                            );
                         }
                         debug('Device requires different firmware');
-                        return confirmHelper(promiseConfirm)
-                            .then(() => choiceHelper(Object.keys(dfu), promiseChoice))
-                            .then(choice => (
-                                detachAndWaitFor(
-                                    usbdev,
-                                    interfaceNumber,
-                                    selectedDevice.serialNumber,
-                                )
-                                    .then(device => (
-                                        checkConfirmUpdateBootloader(
-                                            device,
-                                            LATEST_BOOTLOADER_VERSION,
-                                            promiseConfirm,
-                                        ).then(() => prepareInDFUBootloader(device, dfu[choice]))
-                                    ))
-                            ))
-                            .then(device => validateSerialPort(device, needSerialport))
-                            .then(device => {
-                                debug('DFU finished: ', device);
-                                return createReturnValue(device, { wasProgrammed: true });
-                            })
-                            .catch(err => {
-                                debug('DFU failed: ', err);
-                                return Promise.reject(err);
-                            });
+                        return performDFU(selectedDevice, options);
                     });
             }
             debug('Device is not in DFU-Bootloader and has no DFU trigger interface');
@@ -521,18 +536,27 @@ export function setupDevice(selectedDevice, options) {
                     return selectedDevice;
                 }
                 return confirmHelper(promiseConfirm)
-                    .then(() => programFirmware(selectedDevice, firmwareFamily))
-                    .then(() => {
-                        wasProgrammed = true;
+                    .then(isConfirmed => {
+                        if (!isConfirmed) {
+                            // go on without update
+                            return selectedDevice;
+                        }
+                        return programFirmware(selectedDevice, firmwareFamily)
+                            .then(() => {
+                                wasProgrammed = true;
+                            });
                     });
             })
             .then(
                 () => closeJLink(selectedDevice).then(() => selectedDevice),
                 err => closeJLink(selectedDevice).then(() => Promise.reject(err))
             )
-            .then(() => createReturnValue(selectedDevice, { wasProgrammed }));
+            .then(() => createReturnValue(selectedDevice, { wasProgrammed }, detailedOutput));
     }
 
     debug('Selected device cannot be prepared, maybe the app still can use it');
-    return Promise.resolve(createReturnValue(selectedDevice, { wasProgrammed: false }));
+    return Promise.resolve(createReturnValue(
+        selectedDevice,
+        { wasProgrammed: false }, detailedOutput,
+    ));
 }
