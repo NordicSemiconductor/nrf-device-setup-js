@@ -317,21 +317,33 @@ async function choiceHelper(choices, promiseChoice) {
     return choices.pop();
 }
 
-async function checkBootloaderVersion(device) {
+/**
+ * Get firmware version of currently running dfu bootloader.
+ *
+ * @param {Object} device device
+ * @returns {Promise<number>} version number of bootloader
+ */
+async function getBootloaderVersion(device) {
     const usbSerialTransport = new DfuTransportUsbSerial(device.serialNumber, 0);
     const firmwareVersions = await usbSerialTransport.getAllFirmwareVersions();
-    debug(firmwareVersions);
     await new Promise(resolve => usbSerialTransport.port.close(resolve));
+
     const bootloaderVersion = firmwareVersions.find(fw => fw.imageType === 'Bootloader');
     if (!bootloaderVersion) {
         throw new Error('Bootloader version couldn`t be found');
     }
 
     debug(`Bootloader version ${bootloaderVersion.version} is found.`);
-
     return bootloaderVersion.version;
 }
 
+/**
+ * Updates the dfu bootloader.
+ * The bootloader is loaded from signed official zip file contained in this module.
+ *
+ * @param {Object} device device
+ * @returns {Promise<Object>} device object after dfu is completed and device is enumerated again.
+ */
 async function updateBootloader(device) {
     const { comName } = device.serialport;
     debug(`Bootloader for device ${device.serialNumber} on ${comName} will be updated`);
@@ -347,13 +359,21 @@ async function updateBootloader(device) {
     return waitForDevice(device.serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['serialport']);
 }
 
-async function checkConfirmUpdateBootloader(device, expectedBootloaderVersion, promiseConfirm) {
+/**
+ * Procedure of checking firmware version of the currently running bootloader,
+ * in case it's not the latest - after confirmation - it is updated.
+ *
+ * @param {Object} device device
+ * @param {function} promiseConfirm funtion that returns Promise<boolean> for confirmation
+ * @returns {Promise<Object>} updated device
+ */
+async function checkConfirmUpdateBootloader(device, promiseConfirm) {
     if (!promiseConfirm) {
         // without explicit consent bootloader will not be updated
         return device;
     }
-    const bootloaderVersion = await checkBootloaderVersion(device);
-    if (bootloaderVersion >= expectedBootloaderVersion) {
+    const bootloaderVersion = await getBootloaderVersion(device);
+    if (bootloaderVersion >= LATEST_BOOTLOADER_VERSION) {
         return device;
     }
     if (!await promiseConfirm('Newer version of the bootloader is available, do you want to update it?')) {
@@ -363,7 +383,14 @@ async function checkConfirmUpdateBootloader(device, expectedBootloaderVersion, p
     return updateBootloader(device);
 }
 
-async function ensureBootloaderMode(device, serialNumber) {
+/**
+ * Trigger DFU Bootloader mode if the device is not yet in that mode.
+ *
+ * @param {Object} device device
+ * @returns {Promise<Object>} device object which is already in bootloader.
+ */
+async function ensureBootloaderMode(device) {
+    const { serialNumber } = device;
     if (isDeviceInDFUBootloader(device)) {
         debug('Device is in bootloader mode');
         return device;
@@ -386,17 +413,26 @@ async function ensureBootloaderMode(device, serialNumber) {
     );
 }
 
-// Adds detailed output if enabled in options
-const createReturnValue = (device, details, detailedOutput) => {
-    if (detailedOutput) {
-        return {
-            device,
-            details,
-        };
-    }
-    return device;
-};
+/**
+ * Adds detailed output if enabled in options
+ *
+ * @param {Object} device device
+ * @param {Object} details device
+ * @param {boolean} detailedOutput device
+ * @returns {Object} Either the device or the {device, details} object
+ */
+const createReturnValue = (device, details, detailedOutput) => (
+    detailedOutput ? { device, details } : device
+);
 
+/**
+ * DFU procedure which also tries to update bootloader in case bootloader mode is
+ * set during the process and it happens to be outdated.
+ *
+ * @param {Object} selectedDevice device
+ * @param {Object} options options
+ * @returns {Promise} device or { device, details } object
+ */
 async function performDFU(selectedDevice, options) {
     const {
         dfu, needSerialport, detailedOutput,
@@ -410,13 +446,12 @@ async function performDFU(selectedDevice, options) {
     const choice = await choiceHelper(Object.keys(dfu), promiseChoice);
 
     try {
-        let device = await ensureBootloaderMode(selectedDevice, selectedDevice.serialNumber);
+        let device = await ensureBootloaderMode(selectedDevice);
         device = await checkConfirmUpdateBootloader(
             device,
-            LATEST_BOOTLOADER_VERSION,
             promiseConfirmBootloader || promiseConfirm,
         );
-        device = await ensureBootloaderMode(device, selectedDevice.serialNumber);
+        device = await ensureBootloaderMode(device);
         device = await prepareInDFUBootloader(device, dfu[choice]);
         device = await validateSerialPort(device, needSerialport);
 
