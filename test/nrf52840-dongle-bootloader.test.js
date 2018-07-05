@@ -30,48 +30,51 @@
  */
 
 const path = require('path');
-const fs = require('fs');
-const { getNordicUsbDevice } = require('./util/common');
+const {
+    getNordicUsbDevice, getNordicDfuDevice,
+    programBootloaderJlinkDevice, getJlinkDevice,
+} = require('./util/common');
 const { setupDevice } = require('../');
 
-jest.setTimeout(50000);
+jest.setTimeout(20000);
 
-const RSSI_OPTIONS = {
+const confirmYes = () => new Promise(resolve => resolve(true));
+const confirmNo = () => new Promise(resolve => resolve(false));
+
+const NRF52_SERIALNUMBER_REGEX = /^.*683[0-9]{6}/;
+const BOOTLOADER = path.resolve(__dirname, '../bin/fw/graviton_bootloader_mbr_v1.0.1-[nRF5_SDK_15.0.1-1.alpha_f76d012].hex');
+const OPTIONS = {
     dfu: {
         pca10059: {
             application: path.resolve(__dirname, '../bin/fw/rssi-10059.hex'),
-            semver: 'rssi_cdc_acm 2.0.0+dfuMay-22-2018-10-43-22',
-        },
-    },
-};
-
-const CONNECTIVITY_OPTIONS = {
-    dfu: {
-        pca10059: {
-            application: fs.readFileSync(path.resolve(__dirname, '../bin/fw/connectivity_1.2.2_usb_for_s132_3.0.hex')),
-            softdevice: fs.readFileSync(path.resolve(__dirname, '../bin/fw/s132_nrf52_3.0.0_softdevice.hex')),
-            semver: 'ble-connectivity 0.1.0+May-28-2018-12-30-56',
-            params: {
-                hwVersion: 52,
-                fwVersion: 0xffffffff,
-                sdReq: [0],
-                sdId: [0x8C],
-            },
+            semver: '', // forced update
         },
     },
     detailedOutput: true,
 };
 
-describe('nrf52840 dongle', () => {
-    it('is programmed when firmware is not present, but skips programming when firmware is already present', () => (
-        getNordicUsbDevice()
-            .then(device => setupDevice(device, RSSI_OPTIONS))
-            .then(device => setupDevice(device, CONNECTIVITY_OPTIONS))
-            .then(result => {
-                expect(result.details.wasProgrammed).toEqual(true);
-                return result.device;
-            })
-            .then(device => setupDevice(device, CONNECTIVITY_OPTIONS))
-            .then(result => expect(result.details.wasProgrammed).toEqual(false))
-    ));
+describe('nrf52840 dongle bootloader', () => {
+    beforeAll(async () => {
+        const device = await getJlinkDevice(NRF52_SERIALNUMBER_REGEX);
+        await programBootloaderJlinkDevice(device, BOOTLOADER);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }, 20000);
+
+    it('is programmed without bootloader update', async () => {
+        const device = await getNordicDfuDevice();
+        const result = await setupDevice(
+            device,
+            { ...OPTIONS, promiseConfirmBootloader: confirmNo }
+        );
+        expect(result.details.wasProgrammed).toEqual(true);
+    });
+
+    it('is programmed with bootloader update', async () => {
+        const device = await getNordicUsbDevice();
+        const result = await setupDevice(
+            device,
+            { ...OPTIONS, promiseConfirmBootloader: confirmYes }
+        );
+        expect(result.details.wasProgrammed).toEqual(true);
+    });
 });
