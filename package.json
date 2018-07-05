@@ -40,6 +40,8 @@
     "rollup-plugin-eslint": "^4.0.0"
   },
   "jest": {
-    "testMatch": ["**/test/main.test.js"]
+    "testMatch": [
+      "**/test/main.test.js"
+    ]
   }
 }

@@ -150,11 +150,11 @@ module.exports.getNordicDfuDevice = () => {
         .then(deviceMap => {
             const devices = Array.from(deviceMap.values());
             const device = devices.find(dev => (
-                (dev.serialport.vendorId === '1915' && dev.serialport.productId === '521F')
+                (dev.serialport.vendorId === '1915' && dev.serialport.productId.toUpperCase() === '521F')
             ));
             if (device) {
                 return device;
             }
-            throw new Error('No Nordic USB device found.');
+            throw new Error('No Nordic DFU device found.');
         });
 };

@@ -100,7 +100,7 @@ function isDeviceInDFUBootloader(device) {
     }
     if (device.serialport) {
         const { vendorId, productId } = device.serialport;
-        return (vendorId === '1915' && productId === '521F');
+        return (vendorId === '1915' && productId.toUpperCase() === '521F');
     }
     return false;
 }

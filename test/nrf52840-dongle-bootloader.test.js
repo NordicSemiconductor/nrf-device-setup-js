@@ -53,12 +53,12 @@ const OPTIONS = {
     detailedOutput: true,
 };
 
-describe('nrf52840 dongle', () => {
-    it('is programmed with old bootloader, so we can upgrade it', async () => {
+describe('nrf52840 dongle bootloader', () => {
+    beforeAll(async () => {
         const device = await getJlinkDevice(NRF52_SERIALNUMBER_REGEX);
         await programBootloaderJlinkDevice(device, BOOTLOADER);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }, 20000);
 
     it('is programmed without bootloader update', async () => {
         const device = await getNordicDfuDevice();
