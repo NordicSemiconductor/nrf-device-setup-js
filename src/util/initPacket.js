@@ -186,7 +186,7 @@ function messageToBuffer(type, message) {
  * @param {Integer} signatureType   the type of signature
  * @param {Array}   signature       the signature in bytes
  *
- * @returns {Promise} the Promise which returns reset command packet
+ * @returns {Object} reset command packet
  */
 export function createResetPacket(timeout, signatureType, signature) {
     try {
@@ -229,7 +229,7 @@ export function createResetPacket(timeout, signatureType, signature) {
  * @param {Integer} signatureType   the type of signature
  * @param {Array}   signature       the signature in bytes
  *
- * @returns {Promise} the Promise which returns buffer converted from reset command packet
+ * @returns {Buffer} converted from reset command packet
  */
 export function createResetPacketBuffer(timeout, signatureType, signature) {
     const packet = createResetPacket(timeout, signatureType, signature);
@@ -254,7 +254,7 @@ export function createResetPacketBuffer(timeout, signatureType, signature) {
  * @param {SignatureType}   signatureType   the type of signature
  * @param {Array}           signature       the signature in bytes
  *
- * @returns {Promise} the Promise which returns init command packet
+ * @returns {Object} init command packet
  */
 export function createInitPacket(
     fwVersion,
@@ -324,7 +324,7 @@ export function createInitPacket(
  * @param {SignatureType}   signatureType   the type of signature
  * @param {Array}           signature       the signature in bytes
  *
- * @returns {Promise} the Promise which returns buffer converted from init command packet
+ * @returns {Buffer} converted from init command packet
  */
 export function createInitPacketBuffer(
     fwVersion,
@@ -364,7 +364,7 @@ export function createInitPacketBuffer(
  *
  * @param {InitPacket} packetParams the InitPacket which carries all infomations
  *
- * @returns {Promise} the Promise which returns Uint8Array converted from init command packet buffer
+ * @returns {Uint8Array} converted from init command packet buffer
  */
 export function createInitPacketUint8Array(packetParams) {
     const packet = createInitPacket(
