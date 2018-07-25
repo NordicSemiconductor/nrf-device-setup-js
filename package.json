@@ -1,6 +1,6 @@
 {
   "name": "nrf-device-setup",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "Common USB/serialport/jlink device actions to check/program nRF devices",
   "main": "dist/index.js",
   "license": "BSD-3",
@@ -23,11 +23,11 @@
     "jest": "^23.2.0",
     "nrf-device-lister": "^2.0.0",
     "nrf-intel-hex": "^1.3.0",
-    "pc-nrf-dfu-js": "^0.2.5",
+    "pc-nrf-dfu-js": "^0.2.6",
     "pc-nrfjprog-js": "1.2.0",
     "protobufjs": "^6.8.6",
     "serialport": "^6.2.0",
-    "usb": "^1.3.1"
+    "usb": "^1.3.2"
   },
   "devDependencies": {
     "eslint": "^4.16.0",
