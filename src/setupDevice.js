@@ -195,7 +195,7 @@ function parseFirmwareImage(firmware) {
         startAddress = !startAddress ? address : startAddress;
         endAddress = address + block.length;
     });
-    return memMap.slicePad(startAddress, endAddress - startAddress);
+    return memMap.slicePad(startAddress, Math.ceil((endAddress - startAddress) / 4 ) * 4);
 }
 
 /**
