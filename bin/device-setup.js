@@ -119,7 +119,7 @@ function chooseDevice() {
     });
 }
 
-async function testSetup() {
+async function executeSetup() {
     try {
         const preparedDevice = await setupDevice(
             await chooseDevice(),
@@ -146,4 +146,4 @@ async function testSetup() {
     }
 }
 
-testSetup().then(() => process.exit());
+executeSetup().then(() => process.exit());
