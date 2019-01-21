@@ -38,8 +38,10 @@ const inquirer = require('inquirer');
 const { inspect } = require('util');
 const DeviceLister = require('nrf-device-lister');
 const { ensureBootloaderMode } = require('../');
+const { version } = require('../package.json');
 
 commander
+    .version(version)
     .usage('Utility to interact with DFU trigger interface of Nordic USB devices')
     .option('-s, --serialNumber [sernum]', 'serial number')
     .option('-i, --interactive', 'interactive')
