@@ -195,7 +195,7 @@ function parseFirmwareImage(firmware) {
         startAddress = !startAddress ? address : startAddress;
         endAddress = address + block.length;
     });
-    return memMap.slicePad(startAddress, Math.ceil((endAddress - startAddress) / 4 ) * 4);
+    return memMap.slicePad(startAddress, Math.ceil((endAddress - startAddress) / 4) * 4);
 }
 
 /**
@@ -218,9 +218,10 @@ async function validateSerialPort(device, needSerialport) {
     });
 
     for (let i = 10; i > 1; i -= 1) {
-        /* eslint-disable no-await-in-loop */
+        /* eslint-disable-next-line no-await-in-loop */
         await sleep(2000 / i);
         debug('validating serialport', device.serialport.comName, i);
+        /* eslint-disable-next-line no-await-in-loop */
         if (await checkOpen(device.serialport.comName)) {
             debug('resolving', device);
             return device;
@@ -389,7 +390,7 @@ async function checkConfirmUpdateBootloader(device, promiseConfirm) {
  * @param {Object} device device
  * @returns {Promise<Object>} device object which is already in bootloader.
  */
-async function ensureBootloaderMode(device) {
+export async function ensureBootloaderMode(device) {
     const { serialNumber } = device;
     if (isDeviceInDFUBootloader(device)) {
         debug('Device is in bootloader mode');
@@ -400,6 +401,7 @@ async function ensureBootloaderMode(device) {
     while (!usbdev && retry < 3) {
         retry += 1;
         debug('missing usb, looking for it again');
+        /* eslint-disable-next-line no-await-in-loop */
         usbdev = await waitForDevice(serialNumber, DEFAULT_DEVICE_WAIT_TIME, ['nordicUsb']).usb;
     }
     if (!usbdev) {

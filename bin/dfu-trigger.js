@@ -35,42 +35,21 @@
 
 const commander = require('commander');
 const inquirer = require('inquirer');
-const fs = require('fs');
 const { inspect } = require('util');
 const DeviceLister = require('nrf-device-lister');
-const { setupDevice } = require('../');
+const { ensureBootloaderMode } = require('../');
 const { version } = require('../package.json');
 
 commander
     .version(version)
-    .usage('Utility to program a Nordic USB device via USB DFU.')
-    .option('-a, --application <path>', 'application')
-    .option('-s, --softdevice <path>', 'softdevice')
-    .option('-i, --sd-id <id>', 'softdevice id (in hex e.g. A5)')
-    .option('-H, --hw-version [hw]', 'hardware version', 52)
-    .option('-F, --fw-version [fw]', 'firmware version', 0xffffffff)
-    .option('-S, --semver [semver]', 'application semver')
+    .usage('Utility to interact with DFU trigger interface of Nordic USB devices')
+    .option('-s, --serialNumber [sernum]', 'serial number of the device')
+    .option('-i, --interactive', 'select device interactively')
     .parse(process.argv);
 
-
-const dfu = {};
-try {
-    dfu.application = {
-        application: fs.readFileSync(commander.application),
-        semver: commander.semver,
-        params: {
-            hwVersion: commander.hwVersion,
-            fwVersion: commander.fwVersion,
-            sdReq: [0],
-            sdId: [parseInt(commander.sdId, 16)],
-        },
-    };
-    if (commander.softdevice) {
-        dfu.application.softdevice = fs.readFileSync(commander.softdevice);
-    }
-} catch (err) {
-    console.log(err.message);
-    process.exit(-1);
+if (!(commander.serialNumber || commander.interactive)) {
+    commander.outputHelp();
+    process.exit();
 }
 
 function chooseDevice() {
@@ -98,6 +77,11 @@ function chooseDevice() {
                 });
             });
 
+            if (commander.serialNumber) {
+                resolve(deviceMap.get(commander.serialNumber));
+                return;
+            }
+
             console.log();
             inquirer.prompt([{
                 type: 'list',
@@ -118,31 +102,20 @@ function chooseDevice() {
     });
 }
 
-async function executeSetup() {
+async function main() {
     try {
-        const preparedDevice = await setupDevice(
-            await chooseDevice(),
-            {
-                dfu,
-                needSerialport: true,
-                promiseConfirm: async message => (await inquirer.prompt([{
-                    type: 'confirm',
-                    name: 'isConfirmed',
-                    message,
-                    default: false,
-                }])).isConfirmed,
-                promiseChoice: async (message, choices) => (await inquirer.prompt([{
-                    type: 'list',
-                    name: 'choice',
-                    message,
-                    choices,
-                }])).choice,
-            },
-        );
-        console.log('Device is ready to be opened:', inspect(preparedDevice, false, 1));
+        let device = await chooseDevice();
+        if (!device) {
+            console.log('No device selected');
+            return;
+        }
+
+        device = await ensureBootloaderMode(device);
+
+        console.log('Device is now in bootloader:', inspect(device, false, 1));
     } catch (error) {
         console.log(error.message);
     }
 }
 
-executeSetup().then(() => process.exit());
+main().then(() => process.exit());
