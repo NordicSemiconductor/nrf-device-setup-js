@@ -43,8 +43,8 @@ const { version } = require('../package.json');
 commander
     .version(version)
     .usage('Utility to interact with DFU trigger interface of Nordic USB devices')
-    .option('-s, --serialNumber [sernum]', 'serial number')
-    .option('-i, --interactive', 'interactive')
+    .option('-s, --serialNumber [sernum]', 'serial number of the device')
+    .option('-i, --interactive', 'select device interactively')
     .parse(process.argv);
 
 if (!(commander.serialNumber || commander.interactive)) {
