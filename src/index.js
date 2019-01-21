@@ -31,12 +31,18 @@
 
 import * as initPacket from './util/initPacket';
 import * as dfuTrigger from './dfuTrigger';
-import { setupDevice, waitForDevice, detachAndWaitFor } from './setupDevice';
+import {
+    setupDevice,
+    waitForDevice,
+    detachAndWaitFor,
+    ensureBootloaderMode,
+} from './setupDevice';
 
 export default {
     setupDevice,
     waitForDevice,
     detachAndWaitFor,
+    ensureBootloaderMode,
     dfuTrigger,
     initPacket,
 };

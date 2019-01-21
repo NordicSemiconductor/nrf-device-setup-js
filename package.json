@@ -1,6 +1,6 @@
 {
   "name": "nrf-device-setup",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Common USB/serialport/jlink device actions to check/program nRF devices",
   "main": "dist/index.js",
   "license": "BSD-3",
@@ -19,7 +19,8 @@
     "README.md"
   ],
   "bin": {
-    "device-setup": "./bin/device-setup.js"
+    "device-setup": "./bin/device-setup.js",
+    "dfu-trigger": "./bin/dfu-trigger.js"
   },
   "dependencies": {
     "commander": "^2.19.0",
