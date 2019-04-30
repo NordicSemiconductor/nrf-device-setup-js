@@ -31,9 +31,7 @@
 
 const nrfjprog = require('pc-nrfjprog-js');
 const DeviceLister = require('nrf-device-lister');
-const Debug = require('debug');
-
-const debug = Debug('device-setup:test');
+const debug = require('debug')('device-setup:test');
 
 /**
  * Erase the firmware on the given device.
@@ -41,8 +39,8 @@ const debug = Debug('device-setup:test');
  * @param {Object} device Device object from nrf-device-lister.
  * @returns {Promise<Object>} Resolves with the device object if successful.
  */
-module.exports.eraseJlinkDevice = device => {
-    return new Promise((resolve, reject) => {
+module.exports.eraseJlinkDevice = device => (
+    new Promise((resolve, reject) => {
         nrfjprog.erase(parseInt(device.serialNumber, 10), {}, error => {
             if (error) {
                 reject(error);
@@ -50,8 +48,8 @@ module.exports.eraseJlinkDevice = device => {
                 resolve(device);
             }
         });
-    });
-};
+    })
+);
 
 /**
  * Completely erase the device with `recover` functionality, then program it
@@ -61,8 +59,8 @@ module.exports.eraseJlinkDevice = device => {
  * @param {string} filename Filename of the bootloader hex file.
  * @returns {Promise<Object>} Resolves with the device object if successful.
  */
-module.exports.programBootloaderJlinkDevice = (device, filename) => {
-    return new Promise((resolve, reject) => {
+module.exports.programBootloaderJlinkDevice = (device, filename) => (
+    new Promise((resolve, reject) => {
         const serialNumber = parseInt(device.serialNumber, 10);
         nrfjprog.recover(serialNumber, error => {
             if (error) {
@@ -79,8 +77,8 @@ module.exports.programBootloaderJlinkDevice = (device, filename) => {
                 );
             }
         });
-    });
-};
+    })
+);
 
 /**
  * Get the first J-Link device that matches the given serial number
@@ -112,49 +110,54 @@ module.exports.getJlinkDevice = serialNumberRegex => {
 /**
  * Get the first Nordic USB device (traits: nordicUsb, nordicDfu) that can be found.
  *
+ * @param {string|undefined} serialNumber of the device if expected
  * @returns {Promise<Object>} Resolves with a nrf-device-lister device object, or
  * rejects if no device is found.
  */
-module.exports.getNordicUsbDevice = () => {
+module.exports.getNordicUsbDevice = async serialNumber => {
     const lister = new DeviceLister({
         serialport: true,
         nordicUsb: true,
         nordicDfu: true,
     });
     lister.on('error', error => debug(error.message));
-    return lister.reenumerate()
-        .then(deviceMap => {
-            const devices = Array.from(deviceMap.values());
-            const device = devices.find(dev => (
-                dev.traits.includes('nordicUsb') || dev.traits.includes('nordicDfu')
-            ));
-            if (device) {
-                return device;
-            }
-            throw new Error('No Nordic USB device found.');
-        });
+    const deviceMap = await lister.reenumerate();
+    const device = serialNumber
+        ? deviceMap.get(serialNumber)
+        : Array.from(deviceMap.values()).find(dev => (
+            (dev.serialport.vendorId === '1915' && /521F|C00A/i.test(dev.serialport.productId))
+        ));
+    if (device) {
+        debug(`Returning device ${device.serialNumber}`);
+        return device;
+    }
+    debug('No Nordic USB device found.', deviceMap);
+    throw new Error('No Nordic USB device found.');
 };
 
 /**
  * Get the first Nordic DFU device (traits: serialport) that can be found.
  *
+ * @param {string|undefined} serialNumber of the device if expected
  * @returns {Promise<Object>} Resolves with a nrf-device-lister device object, or
  * rejects if no device is found.
  */
-module.exports.getNordicDfuDevice = () => {
+module.exports.getNordicDfuDevice = async serialNumber => {
     const lister = new DeviceLister({
         serialport: true,
+        nordicDfu: true,
     });
     lister.on('error', error => debug(error.message));
-    return lister.reenumerate()
-        .then(deviceMap => {
-            const devices = Array.from(deviceMap.values());
-            const device = devices.find(dev => (
-                (dev.serialport.vendorId === '1915' && dev.serialport.productId.toUpperCase() === '521F')
-            ));
-            if (device) {
-                return device;
-            }
-            throw new Error('No Nordic DFU device found.');
-        });
+    const deviceMap = await lister.reenumerate();
+    const device = serialNumber
+        ? deviceMap.get(serialNumber)
+        : Array.from(deviceMap.values()).find(dev => (
+            (dev.serialport.vendorId === '1915' && /521F/i.test(dev.serialport.productId))
+        ));
+    if (device) {
+        debug(`Returning device ${device.serialNumber}`);
+        return device;
+    }
+    debug('No Nordic DFU device found.', deviceMap);
+    throw new Error('No Nordic DFU device found.');
 };
