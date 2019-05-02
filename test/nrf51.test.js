@@ -35,7 +35,7 @@ const { setupDevice } = require('../');
 
 jest.setTimeout(20000);
 
-const NRF51_SERIALNUMBER_REGEX = /^.*680[0-9]{6}/;
+const NRF51_SERIALNUMBER_REGEX = /^.*68[0,1][0-9]{6}/;
 const OPTIONS = {
     jprog: {
         nrf51: {
