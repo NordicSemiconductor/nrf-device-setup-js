@@ -559,9 +559,14 @@ export function setupDevice(selectedDevice, options) {
             .then(() => openJLink(selectedDevice))
             .then(() => getDeviceFamily(selectedDevice))
             .then(family => {
-                firmwareFamily = jprog[family];
+                const { boardVersion } = selectedDevice;
+                firmwareFamily = jprog[boardVersion.toLowerCase()];
                 if (!firmwareFamily) {
-                    throw new Error(`No firmware defined for ${family} family`);
+                    debug(`No specific firmware for board ${boardVersion}.`);
+                    firmwareFamily = jprog[family];
+                    if (!firmwareFamily) {
+                        throw new Error(`No firmware defined for ${family} family or board version ${boardVersion}`);
+                    }
                 }
             })
             .then(() => validateFirmware(selectedDevice, firmwareFamily))
