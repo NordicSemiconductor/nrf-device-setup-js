@@ -32,7 +32,7 @@
 /* eslint no-bitwise: 0 */
 
 import os from 'os';
-import usb from 'nrf-usb';
+import usb from 'usb';
 import Debug from 'debug';
 
 const debug = Debug('device-setup:trigger');

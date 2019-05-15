@@ -8,7 +8,7 @@ export default [
         output: [
             { file: pkg.main, format: 'cjs', sourcemap: true },
         ],
-        external: ['events', 'debug', 'nrf-usb', 'serialport', 'pc-nrfjprog-js', 'nrf-device-lister'],
+        external: ['events', 'debug', 'usb', 'serialport', 'pc-nrfjprog-js', 'nrf-device-lister'],
         plugins: [
             async(),
             buble({ transforms: { generator: false } }),
