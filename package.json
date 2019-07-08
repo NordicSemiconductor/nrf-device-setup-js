@@ -28,7 +28,7 @@
     "inquirer": "^6.4.1",
     "nrf-device-lister": "git+https://github.com/NordicSemiconductor/nrf-device-lister-js#update/deps-05072019",
     "nrf-intel-hex": "^1.3.0",
-    "pc-nrf-dfu-js": "^0.2.7",
+    "pc-nrf-dfu-js": "^0.2.8",
     "protobufjs": "^6.8.8"
   },
   "devDependencies": {
