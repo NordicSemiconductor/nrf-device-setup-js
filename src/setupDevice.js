@@ -578,13 +578,13 @@ export function setupDevice(selectedDevice, options) {
                 debug('Found matching firmware definition', key);
                 return jprog[key];
             })
-            .then(firmwareDefinition => (
+            .then(async firmwareDefinition => (
                 {
-                    valid: validateFirmware(selectedDevice, firmwareDefinition),
+                    valid: await validateFirmware(selectedDevice, firmwareDefinition),
                     firmwareDefinition,
                 }
             ))
-            .then((valid, firmwareDefinition) => {
+            .then(({ valid, firmwareDefinition }) => {
                 if (valid) {
                     debug('Application firmware id matches');
                     return selectedDevice;
