@@ -554,7 +554,6 @@ export function setupDevice(selectedDevice, options) {
 
 
     if (jprog && selectedDevice.traits.includes('jlink')) {
-        // let firmwareFamily;
         let wasProgrammed = false;
         return Promise.resolve()
             .then(() => needSerialport && verifySerialPortAvailable(selectedDevice))
