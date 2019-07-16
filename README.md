@@ -79,9 +79,19 @@ const configuration = {
 
 For JLink devices _pc-nrfjprog-js_ is used to check for `fwVersion` at `fwIdAddress`, and
 in case of a mismatch the referenced `fw` is flashed to the device. These values are grouped
-under the device family key, which can be either `nrf51` or `nrf52`.
+under the device type or board version or family key which is resolved by specificity.
+The keys are case-insensitive.
 ```js
 configuration.jprog = {
+    NRF52832_xxAA_REV2: {...},
+
+    // fallback if exact device type not specified
+    NRF52832: {...},
+
+    // fallback if device type not specified
+    PCA10040: {...},
+
+    // fallback to family if board version not specified
     nrf52: {
         fw: path.resolve(__dirname, 'fw/customfirmware-for-nrf52.hex'),
 
@@ -98,6 +108,7 @@ configuration.jprog = {
 
         fwIdAddress: 0x2000,
     },
+
     nrf51: {...},
 }
 ```

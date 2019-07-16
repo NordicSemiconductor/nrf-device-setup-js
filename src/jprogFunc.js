@@ -43,6 +43,37 @@ const debug = Debug('device-setup:jprog');
 const DeviceFamily = {
     [nrfjprog.NRF51_FAMILY]: 'nrf51',
     [nrfjprog.NRF52_FAMILY]: 'nrf52',
+    [nrfjprog.NRF91_FAMILY]: 'nrf91',
+};
+
+const DeviceType = {
+    [nrfjprog.NRF51xxx_xxAA_REV1]: 'NRF51xxx_xxAA_REV1',
+    [nrfjprog.NRF51xxx_xxAA_REV2]: 'NRF51xxx_xxAA_REV2',
+    [nrfjprog.NRF51xxx_xxAA_REV3]: 'NRF51xxx_xxAA_REV3',
+    [nrfjprog.NRF51xxx_xxAB_REV3]: 'NRF51xxx_xxAB_REV3',
+    [nrfjprog.NRF51xxx_xxAC_REV3]: 'NRF51xxx_xxAC_REV3',
+    [nrfjprog.NRF9160_xxAA_FUTURE]: 'NRF9160_xxAA_FUTURE',
+    [nrfjprog.NRF9160_xxAA_REV1]: 'NRF9160_xxAA_REV1',
+    [nrfjprog.NRF51801_xxAB_REV3]: 'NRF51801_xxAB_REV3',
+    [nrfjprog.NRF51802_xxAA_REV3]: 'NRF51802_xxAA_REV3',
+    [nrfjprog.NRF52810_xxAA_FUTURE]: 'NRF52810_xxAA_FUTURE',
+    [nrfjprog.NRF52810_xxAA_REV1]: 'NRF52810_xxAA_REV1',
+    [nrfjprog.NRF52810_xxAA_REV2]: 'NRF52810_xxAA_REV2',
+    [nrfjprog.NRF52811_xxAA_FUTURE]: 'NRF52811_xxAA_FUTURE',
+    [nrfjprog.NRF52811_xxAA_REV1]: 'NRF52811_xxAA_REV1',
+    [nrfjprog.NRF52832_xxAA_ENGA]: 'NRF52832_xxAA_ENGA',
+    [nrfjprog.NRF52832_xxAA_ENGB]: 'NRF52832_xxAA_ENGB',
+    [nrfjprog.NRF52832_xxAA_FUTURE]: 'NRF52832_xxAA_FUTURE',
+    [nrfjprog.NRF52832_xxAA_REV1]: 'NRF52832_xxAA_REV1',
+    [nrfjprog.NRF52832_xxAA_REV2]: 'NRF52832_xxAA_REV2',
+    [nrfjprog.NRF52832_xxAB_FUTURE]: 'NRF52832_xxAB_FUTURE',
+    [nrfjprog.NRF52832_xxAB_REV1]: 'NRF52832_xxAB_REV1',
+    [nrfjprog.NRF52832_xxAB_REV2]: 'NRF52832_xxAB_REV2',
+    [nrfjprog.NRF52840_xxAA_ENGA]: 'NRF52840_xxAA_ENGA',
+    [nrfjprog.NRF52840_xxAA_ENGB]: 'NRF52840_xxAA_ENGB',
+    [nrfjprog.NRF52840_xxAA_FUTURE]: 'NRF52840_xxAA_FUTURE',
+    [nrfjprog.NRF52840_xxAA_REV1]: 'NRF52840_xxAA_REV1',
+    [nrfjprog.NRF52840_xxAA_REV2]: 'NRF52840_xxAA_REV2',
 };
 
 function parseSerial(serialNumber) {
@@ -65,9 +96,14 @@ function getDeviceInfo(serialNumber) {
     return new Promise((resolve, reject) => {
         nrfjprog.getDeviceInfo(parseSerial(serialNumber), (err, deviceInfo) => {
             if (err) {
-                reject(err);
+                reject(new Error(`Error when getting device info ${err.message}`));
             } else {
-                resolve(deviceInfo);
+                const family = DeviceFamily[deviceInfo.family];
+                const deviceType = DeviceType[deviceInfo.deviceType];
+                if (!family) {
+                    reject(new Error('Couldn\'t get device family'));
+                }
+                resolve(Object.assign({}, deviceInfo, { family, deviceType }));
             }
         });
     });
@@ -113,8 +149,8 @@ function program(serialNumber, firmware) {
  */
 function verifySerialPortAvailable(device) {
     if (!device.serialport) {
-        return Promise.reject(new Error('No serial port available for device with ' +
-            `serial number ${device.serialNumber}`));
+        return Promise.reject(new Error('No serial port available for device with '
+            + `serial number ${device.serialNumber}`));
     }
     return new Promise((resolve, reject) => {
         const serialPort = new SerialPort(device.serialport.comName, { autoOpen: false });
@@ -144,20 +180,6 @@ function closeJLink(device) {
     return new Promise((resolve, reject) => {
         nrfjprog.close(parseSerial(device.serialNumber), err => (err ? reject(err) : resolve()));
     });
-}
-
-async function getDeviceFamily(device) {
-    let deviceInfo;
-    try {
-        deviceInfo = await getDeviceInfo(device.serialNumber);
-    } catch (error) {
-        throw new Error(`Error when getting device info ${error.message}`);
-    }
-    const family = DeviceFamily[deviceInfo.family];
-    if (!family) {
-        throw new Error('Couldn\'t get device family');
-    }
-    return family;
 }
 
 async function validateFirmware(device, firmwareFamily) {
@@ -192,7 +214,7 @@ export {
     openJLink,
     closeJLink,
     verifySerialPortAvailable,
-    getDeviceFamily,
+    getDeviceInfo,
     validateFirmware,
     programFirmware,
 };
