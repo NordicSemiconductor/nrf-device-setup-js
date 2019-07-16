@@ -66,7 +66,7 @@ const {
     openJLink,
     closeJLink,
     verifySerialPortAvailable,
-    getDeviceFamily,
+    getDeviceInfo,
     validateFirmware,
     programFirmware,
 } = jprogFunc;
@@ -554,25 +554,37 @@ export function setupDevice(selectedDevice, options) {
 
 
     if (jprog && selectedDevice.traits.includes('jlink')) {
-        let firmwareFamily;
         let wasProgrammed = false;
         return Promise.resolve()
             .then(() => needSerialport && verifySerialPortAvailable(selectedDevice))
             .then(() => openJLink(selectedDevice))
-            .then(() => getDeviceFamily(selectedDevice))
-            .then(family => {
-                const { boardVersion } = selectedDevice;
-                firmwareFamily = jprog[boardVersion.toLowerCase()];
-                if (!firmwareFamily) {
-                    debug(`No specific firmware for board ${boardVersion}.`);
-                    firmwareFamily = jprog[family];
-                    if (!firmwareFamily) {
-                        throw new Error(`No firmware defined for ${family} family or board version ${boardVersion}`);
-                    }
+            .then(() => getDeviceInfo(selectedDevice))
+            .then(deviceInfo => {
+                Object.assign(selectedDevice, { deviceInfo });
+
+                const family = (deviceInfo.family || '').toLowerCase();
+                const deviceType = (deviceInfo.deviceType || '').toLowerCase();
+                const shortDeviceType = deviceType.split('_').shift();
+                const boardVersion = (selectedDevice.boardVersion || '').toLowerCase();
+
+                const key = Object.keys(jprog).find(k => k.toLowerCase() === deviceType)
+                    || Object.keys(jprog).find(k => k.toLowerCase() === shortDeviceType)
+                    || Object.keys(jprog).find(k => k.toLowerCase() === boardVersion)
+                    || Object.keys(jprog).find(k => k.toLowerCase() === family);
+
+                if (!key) {
+                    throw new Error('No firmware defined for selected device');
                 }
+                debug('Found matching firmware definition', key);
+                return jprog[key];
             })
-            .then(() => validateFirmware(selectedDevice, firmwareFamily))
-            .then(valid => {
+            .then(firmwareDefinition => (
+                {
+                    valid: validateFirmware(selectedDevice, firmwareDefinition),
+                    firmwareDefinition,
+                }
+            ))
+            .then((valid, firmwareDefinition) => {
                 if (valid) {
                     debug('Application firmware id matches');
                     return selectedDevice;
@@ -583,7 +595,7 @@ export function setupDevice(selectedDevice, options) {
                             // go on without update
                             return selectedDevice;
                         }
-                        return programFirmware(selectedDevice, firmwareFamily)
+                        return programFirmware(selectedDevice, firmwareDefinition)
                             .then(() => {
                                 wasProgrammed = true;
                             });
@@ -599,6 +611,7 @@ export function setupDevice(selectedDevice, options) {
     debug('Selected device cannot be prepared, maybe the app still can use it');
     return Promise.resolve(createReturnValue(
         selectedDevice,
-        { wasProgrammed: false }, detailedOutput,
+        { wasProgrammed: false },
+        detailedOutput,
     ));
 }
