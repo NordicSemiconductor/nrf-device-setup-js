@@ -92,7 +92,7 @@ function read(serialNumber, address, length) {
     });
 }
 
-function getDeviceInfo(serialNumber) {
+function getDeviceInfo({ serialNumber }) {
     return new Promise((resolve, reject) => {
         nrfjprog.getDeviceInfo(parseSerial(serialNumber), (err, deviceInfo) => {
             if (err) {
