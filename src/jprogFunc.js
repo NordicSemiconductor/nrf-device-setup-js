@@ -43,19 +43,21 @@ const debug = Debug('device-setup:jprog');
 const DeviceFamily = {
     [nrfjprog.NRF51_FAMILY]: 'nrf51',
     [nrfjprog.NRF52_FAMILY]: 'nrf52',
+    [nrfjprog.NRF53_FAMILY]: 'nrf53',
     [nrfjprog.NRF91_FAMILY]: 'nrf91',
 };
 
 const DeviceType = {
+    // nRF51 versions
+    [nrfjprog.NRF51801_xxAB_REV3]: 'NRF51801_xxAB_REV3',
+    [nrfjprog.NRF51802_xxAA_REV3]: 'NRF51802_xxAA_REV3',
     [nrfjprog.NRF51xxx_xxAA_REV1]: 'NRF51xxx_xxAA_REV1',
     [nrfjprog.NRF51xxx_xxAA_REV2]: 'NRF51xxx_xxAA_REV2',
     [nrfjprog.NRF51xxx_xxAA_REV3]: 'NRF51xxx_xxAA_REV3',
     [nrfjprog.NRF51xxx_xxAB_REV3]: 'NRF51xxx_xxAB_REV3',
     [nrfjprog.NRF51xxx_xxAC_REV3]: 'NRF51xxx_xxAC_REV3',
-    [nrfjprog.NRF9160_xxAA_FUTURE]: 'NRF9160_xxAA_FUTURE',
-    [nrfjprog.NRF9160_xxAA_REV1]: 'NRF9160_xxAA_REV1',
-    [nrfjprog.NRF51801_xxAB_REV3]: 'NRF51801_xxAB_REV3',
-    [nrfjprog.NRF51802_xxAA_REV3]: 'NRF51802_xxAA_REV3',
+
+    // nRF52 versions
     [nrfjprog.NRF52810_xxAA_FUTURE]: 'NRF52810_xxAA_FUTURE',
     [nrfjprog.NRF52810_xxAA_REV1]: 'NRF52810_xxAA_REV1',
     [nrfjprog.NRF52810_xxAA_REV2]: 'NRF52810_xxAA_REV2',
@@ -69,11 +71,23 @@ const DeviceType = {
     [nrfjprog.NRF52832_xxAB_FUTURE]: 'NRF52832_xxAB_FUTURE',
     [nrfjprog.NRF52832_xxAB_REV1]: 'NRF52832_xxAB_REV1',
     [nrfjprog.NRF52832_xxAB_REV2]: 'NRF52832_xxAB_REV2',
+    [nrfjprog.NRF52833_xxAA_FUTURE]: 'NRF52833_xxAA_FUTURE',
+    [nrfjprog.NRF52833_xxAA_REV1]: 'NRF52833_xxAA_REV1',
     [nrfjprog.NRF52840_xxAA_ENGA]: 'NRF52840_xxAA_ENGA',
     [nrfjprog.NRF52840_xxAA_ENGB]: 'NRF52840_xxAA_ENGB',
     [nrfjprog.NRF52840_xxAA_FUTURE]: 'NRF52840_xxAA_FUTURE',
     [nrfjprog.NRF52840_xxAA_REV1]: 'NRF52840_xxAA_REV1',
     [nrfjprog.NRF52840_xxAA_REV2]: 'NRF52840_xxAA_REV2',
+
+    // nRF53 versions
+    [nrfjprog.NRF5340_xxAA_ENGA]: 'NRF5340_xxAA_ENGA',
+    [nrfjprog.NRF5340_xxAA_REV1]: 'NRF5340_xxAA_REV1',
+    [nrfjprog.NRF5340_xxAA_FUTURE]: 'NRF5340_xxAA_FUTURE',
+
+    // nRF91 versions
+    [nrfjprog.NRF9160_xxAA_FP1]: 'NRF9160_xxAA_FP1',
+    [nrfjprog.NRF9160_xxAA_FUTURE]: 'NRF9160_xxAA_FUTURE',
+    [nrfjprog.NRF9160_xxAA_REV1]: 'NRF9160_xxAA_REV1',
 };
 
 function parseSerial(serialNumber) {
