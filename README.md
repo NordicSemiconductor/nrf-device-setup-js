@@ -10,7 +10,7 @@ the other is DFU'd (Device Firmware Upgrade) via USB CDC ACM transport.
 By using this module the caller does _not_ need to use [pc-nrfjprog-js](https://github.com/NordicSemiconductor/pc-nrfjprog-js) and [pc-nrf-dfu-js](https://github.com/NordicSemiconductor/pc-nrf-dfu-js) directly,
 only the device/firmware configuration shall be provided.
 
-This module is primarily used by the [nRF Connect](https://github.com/NordicSemiconductor/pc-nrfconnect-core) framework and related nRF Connect apps.
+This module is primarily used by the [nRF Connect](https://github.com/NordicSemiconductor/pc-nrfconnect-launcher) framework and related nRF Connect apps.
 
 The following devices are supported:
 
@@ -38,7 +38,7 @@ Due to dependency on _pc-nrfjprog-js_, installation of lower level tools and lib
 
 ##### Windows
 
-In order to access Nordic USB devices specific drivers must be installed on Windows, which are automatically installed by nRF Connect for Desktop (starting from version 2.4). The drivers can be found [here](https://github.com/NordicSemiconductor/pc-nrfconnect-core/tree/master/build/drivers).
+In order to access Nordic USB devices specific drivers must be installed on Windows, which are automatically installed by nRF Connect for Desktop (starting from version 2.4). The drivers can be found [here](https://github.com/NordicSemiconductor/pc-nrfconnect-launcher/tree/master/build/drivers).
 
 ##### Linux
 Linux requires correct permissions to access these devices. For this purpose please install udev rules from [nrf-udev](https://github.com/NordicSemiconductor/nrf-udev) repository, follow instructions there.
