@@ -11,6 +11,7 @@ jobs:
     inputs:
       versionSpec: 10
   - script: |
+      set -o errexit -o pipefail
       npm i
       npm run rollup
 
