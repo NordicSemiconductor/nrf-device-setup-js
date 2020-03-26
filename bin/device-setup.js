@@ -93,7 +93,7 @@ function chooseDevice() {
                 const type = Object.keys(traits).find(e => Object.keys(device).includes(e));
                 choices.push({
                     key: serialNumber.toString(),
-                    name: `${serialNumber}: (${device.serialport.comName}) ${device[type].manufacturer} / ${device[type].product || device[type].productId}`,
+                    name: `${serialNumber}: (${device.serialport.path}) ${device[type].manufacturer} / ${device[type].product || device[type].productId}`,
                     value: serialNumber,
                 });
             });

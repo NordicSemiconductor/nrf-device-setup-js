@@ -170,7 +170,7 @@ function verifySerialPortAvailable(device) {
             + `serial number ${device.serialNumber}`));
     }
     return new Promise((resolve, reject) => {
-        const serialPort = new SerialPort(device.serialport.comName, { autoOpen: false });
+        const serialPort = new SerialPort(device.serialport.path, { autoOpen: false });
         serialPort.open(openErr => {
             if (openErr) {
                 reject(openErr);

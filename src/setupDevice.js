@@ -210,8 +210,8 @@ async function validateSerialPort(device, needSerialport) {
         return device;
     }
 
-    const checkOpen = comName => new Promise(resolve => {
-        const port = new SerialPort(comName, { baudRate: 115200 }, err => {
+    const checkOpen = path => new Promise(resolve => {
+        const port = new SerialPort(path, { baudRate: 115200 }, err => {
             if (!err) port.close();
             resolve(!err);
         });
@@ -220,9 +220,9 @@ async function validateSerialPort(device, needSerialport) {
     for (let i = 10; i > 1; i -= 1) {
         /* eslint-disable-next-line no-await-in-loop */
         await sleep(2000 / i);
-        debug('validating serialport', device.serialport.comName, i);
+        debug('validating serialport', device.serialport.path, i);
         /* eslint-disable-next-line no-await-in-loop */
-        if (await checkOpen(device.serialport.comName)) {
+        if (await checkOpen(device.serialport.path)) {
             debug('resolving', device);
             return device;
         }
@@ -241,8 +241,8 @@ async function validateSerialPort(device, needSerialport) {
  * @returns {Promise} resolved to prepared device
  */
 async function prepareInDFUBootloader(device, dfu) {
-    const { comName } = device.serialport;
-    debug(`${device.serialNumber} on ${comName} is now in DFU-Bootloader...`);
+    const { path } = device.serialport;
+    debug(`${device.serialNumber} on ${path} is now in DFU-Bootloader...`);
 
     const { application, softdevice } = dfu;
     let { params } = dfu;
@@ -346,8 +346,8 @@ async function getBootloaderVersion(device) {
  * @returns {Promise<Object>} device object after dfu is completed and device is enumerated again.
  */
 async function updateBootloader(device) {
-    const { comName } = device.serialport;
-    debug(`Bootloader for device ${device.serialNumber} on ${comName} will be updated`);
+    const { path } = device.serialport;
+    debug(`Bootloader for device ${device.serialNumber} on ${path} will be updated`);
 
     const updates = await DfuUpdates.fromZipFilePath(LATEST_BOOTLOADER_PATH);
     const usbSerialTransport = new DfuTransportUsbSerial(device.serialNumber, 0);
