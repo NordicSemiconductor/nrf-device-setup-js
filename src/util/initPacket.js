@@ -196,8 +196,8 @@ export function createResetPacket(timeout, signatureType, signature) {
         }
 
         // It checks both null and undefined here
-        if ((signatureType == null && signature != null) ||
-            (signatureType != null && signature == null)) {
+        if ((signatureType == null && signature != null)
+            || (signatureType != null && signature == null)) {
             throw new Error('Either signature type or signature is not set');
         }
 
@@ -272,8 +272,8 @@ export function createInitPacket(
 ) {
     try {
         // It checks both null and undefined here
-        if ((signatureType == null && signature != null) ||
-            (signatureType != null && signature == null)) {
+        if ((signatureType == null && signature != null)
+            || (signatureType != null && signature == null)) {
             throw new Error('Either signature type or signature is not set');
         }
 

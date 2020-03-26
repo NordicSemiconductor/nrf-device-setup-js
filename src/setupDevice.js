@@ -210,8 +210,8 @@ async function validateSerialPort(device, needSerialport) {
         return device;
     }
 
-    const checkOpen = path => new Promise(resolve => {
-        const port = new SerialPort(path, { baudRate: 115200 }, err => {
+    const checkOpen = serialPath => new Promise(resolve => {
+        const port = new SerialPort(serialPath, { baudRate: 115200 }, err => {
             if (!err) port.close();
             resolve(!err);
         });
@@ -241,8 +241,7 @@ async function validateSerialPort(device, needSerialport) {
  * @returns {Promise} resolved to prepared device
  */
 async function prepareInDFUBootloader(device, dfu) {
-    const { path } = device.serialport;
-    debug(`${device.serialNumber} on ${path} is now in DFU-Bootloader...`);
+    debug(`${device.serialNumber} on ${device.serialport.path} is now in DFU-Bootloader...`);
 
     const { application, softdevice } = dfu;
     let { params } = dfu;
@@ -346,8 +345,7 @@ async function getBootloaderVersion(device) {
  * @returns {Promise<Object>} device object after dfu is completed and device is enumerated again.
  */
 async function updateBootloader(device) {
-    const { path } = device.serialport;
-    debug(`Bootloader for device ${device.serialNumber} on ${path} will be updated`);
+    debug(`Bootloader for device ${device.serialNumber} on ${device.serialport.path} will be updated`);
 
     const updates = await DfuUpdates.fromZipFilePath(LATEST_BOOTLOADER_PATH);
     const usbSerialTransport = new DfuTransportUsbSerial(device.serialNumber, 0);

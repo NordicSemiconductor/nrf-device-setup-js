@@ -93,9 +93,9 @@ function assertDfuTriggerInterface(usbdev, interfaceNumber) {
         throw new Error(`Interface number ${interfaceNumber} does not exist on USB device; cannot perform DFU trigger operation.`);
     }
 
-    if (iface.descriptor.bInterfaceClass !== 255 ||
-        iface.descriptor.bInterfaceSubClass !== 1 ||
-        iface.descriptor.bInterfaceProtocol !== 1
+    if (iface.descriptor.bInterfaceClass !== 255
+        || iface.descriptor.bInterfaceSubClass !== 1
+        || iface.descriptor.bInterfaceProtocol !== 1
     ) {
         throw new Error(`Interface number ${interfaceNumber} does not look like a DFU trigger interface; cannot perform DFU trigger operation.`);
     }
@@ -113,9 +113,9 @@ function getDFUInterfaceNumber(usbdev) {
     }
 
     const dfuTriggerInterface = usbdev.interfaces.findIndex(iface => (
-        iface.descriptor.bInterfaceClass === 255 &&
-        iface.descriptor.bInterfaceSubClass === 1 &&
-        iface.descriptor.bInterfaceProtocol === 1
+        iface.descriptor.bInterfaceClass === 255
+        && iface.descriptor.bInterfaceSubClass === 1
+        && iface.descriptor.bInterfaceProtocol === 1
     ));
 
     if (wasClosed) {
@@ -184,13 +184,13 @@ const sendDetachRequest = openDecorator((usbdev, interfaceNumber) => (
                     // so the expected result is that the control transfer will stall.
                     // On MacOS, DFU detach request does not stall as on Windows.
                     // Just regard it as detaching successfully.
-                    if (err &&
-                        err.errno === usb.LIBUSB_TRANSFER_STALL &&
-                        err.message === 'LIBUSB_TRANSFER_STALL') {
+                    if (err
+                        && err.errno === usb.LIBUSB_TRANSFER_STALL
+                        && err.message === 'LIBUSB_TRANSFER_STALL') {
                         resolve();
-                    } else if (err &&
-                        err.errno === usb.LIBUSB_ERROR_IO &&
-                        err.message === 'LIBUSB_ERROR_IO') {
+                    } else if (err
+                        && err.errno === usb.LIBUSB_ERROR_IO
+                        && err.message === 'LIBUSB_ERROR_IO') {
                         // This edge case only happens when using the "libusb" kernel
                         // driver on win32 (not "winusb", not "libusbk")
                         resolve();
