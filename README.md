@@ -218,3 +218,7 @@ The project comes with automated integration tests in the `test` directory. In o
 To run tests for only one device type, include the name of the test file e.g.
 
     npm test -- nrf51
+
+To include the tests for the nRF52840 dongle, you have to set the environment variable `DONGLE_SERIAL_NUMBER` to the serial number of your dongle e.g.
+
+    DONGLE_SERIAL_NUMBER=E5530B54CD8C npm test
