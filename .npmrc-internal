@@ -1,0 +1,10 @@
+  strict-ssl=true
+  registry=https://npm.nordicsemi.no/
+  @babel:registry=https://registry.npmjs.org/
+  @cnakazawa:registry=https://registry.npmjs.org/
+  @jest:registry=https://registry.npmjs.org/
+  @protobufjs:registry=https://registry.npmjs.org/
+  @serialport:registry=https://registry.npmjs.org/
+  @types:registry=https://registry.npmjs.org/
+  string_decoder:registry=https://registry.npmjs.org/
+  glob:registry=https://registry.npmjs.org/

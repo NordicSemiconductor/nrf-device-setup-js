@@ -10,6 +10,12 @@
     "rollup": "rollup -c rollup.config.js",
     "lint": "eslint src/ bin/"
   },
+  "binary": {
+    "module_name": "pc-nrfjprog-js",
+    "module_path": "./build/Release",
+    "host": "https://github.com/NordicSemiconductor/pc-nrfjprog-js/releases/download/",
+    "remote_path": "v{version}"
+  },
   "files": [
     "dist/",
     "src/",
@@ -35,7 +41,7 @@
     "eslint": "^6.0.1",
     "eslint-config-airbnb-base": "^13.2.0",
     "eslint-plugin-import": "^2.18.0",
-    "pc-nrfconnect-build": "git+https://github.com/NordicPlayground/pc-nrfconnect-build.git#semver:^0.0.1",
+    "pc-nrfconnect-build": "git+https://github.com/NordicPlayground/pc-nrfconnect-build.git#semver:^0.3.0",
     "jest": "^24.8.0",
     "rollup": "^1.16.6",
     "rollup-plugin-async": "^1.2.0",
