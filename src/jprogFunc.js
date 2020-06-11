@@ -62,13 +62,13 @@ const DeviceType = {
     [nrfjprog.NRF52805_xxAA_FUTURE]: 'NRF52805_xxAA_FUTURE',
 
     // nRF52810 versions
-    [nrfjprog.NRF52810_xxAA_FUTURE]: 'NRF52810_xxAA_FUTURE',
     [nrfjprog.NRF52810_xxAA_REV1]: 'NRF52810_xxAA_REV1',
     [nrfjprog.NRF52810_xxAA_REV2]: 'NRF52810_xxAA_REV2',
+    [nrfjprog.NRF52810_xxAA_FUTURE]: 'NRF52810_xxAA_FUTURE',
 
     // nRF52811 versions
-    [nrfjprog.NRF52811_xxAA_FUTURE]: 'NRF52811_xxAA_FUTURE',
     [nrfjprog.NRF52811_xxAA_REV1]: 'NRF52811_xxAA_REV1',
+    [nrfjprog.NRF52811_xxAA_FUTURE]: 'NRF52811_xxAA_FUTURE',
 
     // nRF52820 versions
     [nrfjprog.NRF52820_xxAA_REV1]: 'NRF52820_xxAA_REV1',
@@ -78,24 +78,24 @@ const DeviceType = {
     // nRF52832 versions
     [nrfjprog.NRF52832_xxAA_ENGA]: 'NRF52832_xxAA_ENGA',
     [nrfjprog.NRF52832_xxAA_ENGB]: 'NRF52832_xxAA_ENGB',
-    [nrfjprog.NRF52832_xxAA_FUTURE]: 'NRF52832_xxAA_FUTURE',
     [nrfjprog.NRF52832_xxAA_REV1]: 'NRF52832_xxAA_REV1',
     [nrfjprog.NRF52832_xxAA_REV2]: 'NRF52832_xxAA_REV2',
-    [nrfjprog.NRF52832_xxAB_FUTURE]: 'NRF52832_xxAB_FUTURE',
+    [nrfjprog.NRF52832_xxAA_FUTURE]: 'NRF52832_xxAA_FUTURE',
     [nrfjprog.NRF52832_xxAB_REV1]: 'NRF52832_xxAB_REV1',
     [nrfjprog.NRF52832_xxAB_REV2]: 'NRF52832_xxAB_REV2',
+    [nrfjprog.NRF52832_xxAB_FUTURE]: 'NRF52832_xxAB_FUTURE',
 
     // nRF52833 versions
-    [nrfjprog.NRF52833_xxAA_FUTURE]: 'NRF52833_xxAA_FUTURE',
     [nrfjprog.NRF52833_xxAA_REV1]: 'NRF52833_xxAA_REV1',
+    [nrfjprog.NRF52833_xxAA_FUTURE]: 'NRF52833_xxAA_FUTURE',
 
 
     // nRF52840 versions
     [nrfjprog.NRF52840_xxAA_ENGA]: 'NRF52840_xxAA_ENGA',
     [nrfjprog.NRF52840_xxAA_ENGB]: 'NRF52840_xxAA_ENGB',
-    [nrfjprog.NRF52840_xxAA_FUTURE]: 'NRF52840_xxAA_FUTURE',
     [nrfjprog.NRF52840_xxAA_REV1]: 'NRF52840_xxAA_REV1',
     [nrfjprog.NRF52840_xxAA_REV2]: 'NRF52840_xxAA_REV2',
+    [nrfjprog.NRF52840_xxAA_FUTURE]: 'NRF52840_xxAA_FUTURE',
 
     // nRF53 versions
     [nrfjprog.NRF5340_xxAA_ENGA]: 'NRF5340_xxAA_ENGA',
