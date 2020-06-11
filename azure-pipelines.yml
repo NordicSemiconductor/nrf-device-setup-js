@@ -5,28 +5,43 @@ trigger:
 jobs:
 - job: Build
   pool:
-    vmImage: 'Ubuntu-16.04'
+    vmImage: 'Ubuntu-18.04'
+  variables:
+    - group: wayland
   steps:
   - task: NodeTool@0
     inputs:
-      versionSpec: 10
+      versionSpec: 12
+  - task: DownloadSecureFile@1
+    name: nrfjprogLinux
+    inputs:
+      secureFile: "nrfjprog-10.7.0-linux_x64.tar.gz"
+    condition: eq(variables['INTERNAL'], 'true')
+    displayName: 'Donwload internal nrfjprog for release'
+  - bash: |
+      set -o errexit -o pipefail
+      export LOCAL_NRFJPROG_PATH=$(nrfjprogLinux.secureFilePath)
+      export ENABLE_DRAFT_TEST=true
+      export NODE_PRE_GYP_GITHUB_TOKEN=$(WAYLAND_GITHUB_TOKEN)
+      cat .npmrc-internal >> .npmrc
+      npm config set //npm.nordicsemi.no/:_authToken $(WAYLAND_NPM_TOKEN_INTERNAL)
+      npm i
+      npm run rollup
+    condition: eq(variables['INTERNAL'], 'true')
+    displayName: 'Build with internal release'
   - script: |
       set -o errexit -o pipefail
       npm i
       npm run rollup
-
-- job: Test
-  dependsOn: [
-    Build,
-  ]
-  pool: server
-  steps:
-  - task: InvokeRESTAPI@1
-    displayName: Test
+    condition: ne(variables['INTERNAL'], 'true')
+    displayName: 'Build'
+  - bash: |
+      set -o errexit -o pipefail
+      npm pack
+      mkdir -p ./build/stage
+      mv *.tgz ./build/stage
+    displayName: 'Pack and move package'
+  - task: PublishPipelineArtifact@1
     inputs:
-      connectionType: 'connectedServiceName'
-      serviceConnection: 'waylandJenkins'
-      method: 'POST'
-      urlSuffix: 'view/test/job/nrf-device-setup-js-test/buildWithParameters?BRANCH=$(Build.SourceBranch)&VSTS_URL=$(system.CollectionUri)&TOKEN=$(system.AccessToken)&PROJECT_ID=$(system.teamProjectId)&HUB_NAME=$(system.hostType)&PLAN_ID=$(system.planId)&TASK_ID=$(system.taskInstanceId)&JOB_ID=$(system.jobId)'
-      waitForCompletion: 'true'
-    condition: ne(variables['Build.Reason'], 'PullRequest')
+      path: $(System.DefaultWorkingDirectory)/build/stage
+    displayName: 'Publish artifacts'
