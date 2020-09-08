@@ -449,7 +449,7 @@ async function performDFU(selectedDevice, options) {
         let device = await ensureBootloaderMode(selectedDevice);
         device = await checkConfirmUpdateBootloader(
             device,
-            promiseConfirmBootloader || promiseConfirm,
+            promiseConfirmBootloader,
         );
         device = await ensureBootloaderMode(device);
         device = await prepareInDFUBootloader(device, dfu[choice]);
