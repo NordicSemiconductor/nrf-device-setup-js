@@ -447,10 +447,12 @@ async function performDFU(selectedDevice, options) {
 
     try {
         let device = await ensureBootloaderMode(selectedDevice);
-        device = await checkConfirmUpdateBootloader(
-            device,
-            promiseConfirmBootloader || promiseConfirm,
-        );
+        if (promiseConfirmBootloader !== false) {
+            device = await checkConfirmUpdateBootloader(
+                device,
+                promiseConfirmBootloader || promiseConfirm,
+            );
+        }
         device = await ensureBootloaderMode(device);
         device = await prepareInDFUBootloader(device, dfu[choice]);
         device = await validateSerialPort(device, needSerialport);
