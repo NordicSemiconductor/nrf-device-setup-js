@@ -49,7 +49,7 @@ Object.keys(nrfjprog).forEach(key => {
         Object.assign(DeviceType, { [nrfjprog[key]]: key });
     }
     if (/NRF\d+_FAMILY/.test(key)) {
-        Object.assign(DeviceFamily, { [key]: key.split('_')[0].toLowerCase() });
+        Object.assign(DeviceFamily, { [nrfjprog[key]]: key.split('_')[0].toLowerCase() });
     }
 });
 
